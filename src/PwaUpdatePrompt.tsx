@@ -11,7 +11,7 @@ export default function PwaUpdatePrompt() {
   if (!needRefresh && !offlineReady) return null
 
   return (
-    <div className="fixed bottom-4 right-4 bg-slate-800 text-white text-sm px-4 py-3 rounded-lg shadow-lg">
+    <div className="fixed bottom-4 right-4 bg-slate-800 text-white cursor-pointer text-sm px-4 py-3 rounded-lg shadow-lg">
       {needRefresh ? (
         <>
           Nova versão disponível.{' '}
@@ -20,7 +20,7 @@ export default function PwaUpdatePrompt() {
           </button>
         </>
       ) : (
-        'App pronto pra funcionar offline.'
+        'App atualizado.'
       )}
     </div>
   )

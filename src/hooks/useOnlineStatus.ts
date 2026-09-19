@@ -25,7 +25,6 @@ export function useOnlineStatus(options: UseOnlineStatusOptions = {}) {
 
   const [online, setOnline] = useState(() => navigator.onLine)
   const checkingRef = useRef(false)
-  console.log('online', online)
   const checkConnection = useCallback(async () => {
     if (checkingRef.current) return
     checkingRef.current = true

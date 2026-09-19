@@ -12,10 +12,8 @@ const visual: Record<string, { icon: LucideIcon; gradient: string }> = {
 const visualPadrao = { icon: LayoutGrid, gradient: "from-slate-300 to-slate-400" };
 
 export default function WorkHub() {
-    const { rotasPermitidas, loading } = useRouteAccess();
-    if (loading) {
-        return <div className="min-h-screen flex items-center justify-center text-slate-500">Carregando...</div>;
-    }
+    const { rotasPermitidas } = useRouteAccess();
+    
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
@@ -25,7 +23,7 @@ export default function WorkHub() {
                         <span className="inline-flex items-center gap-2  font-medium tracking-widest uppercase text-slate-500 mb-4">
                             <Wrench className="w-4 h-4" /> CaioDev - ToolBox
                         </span>
-                        <a href="/logout"><LogOut className='text-slate-500 cursor-pointer'/></a>
+                        <a href="/logout"><LogOut className='text-slate-500 cursor-pointer' /></a>
                     </div>
                     <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight text-slate-900 mb-4">
                         Centro de ferramentas

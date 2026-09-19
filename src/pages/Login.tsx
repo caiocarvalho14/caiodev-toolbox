@@ -42,7 +42,7 @@ export default function Login() {
         </div>
 
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-8">
-          <h1 className="text-xl font-semibold text-slate-100 mb-1">Entrar</h1>
+          <h1 className="text-xl font-semibold text-slate-100 mb-1">Entrar na plataforma</h1>
           <p className="text-sm text-slate-500 mb-6">Acessar ferramentas.</p>
 
           <form onSubmit={handleSubmit} className="space-y-4" noValidate>
