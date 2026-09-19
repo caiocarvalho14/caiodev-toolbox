@@ -8,10 +8,14 @@ import { useOfflineList } from '../../../../hooks/useOfflineList.ts'
 import { marcasRepository } from '../repositories/marcasRepository.ts'
 import type { MarcaItem } from '../types/Marcas.ts'
 
+import { useSyncStatusMap } from "../../../../hooks/useSyncStatusMap"
+import { SyncBadge } from '../../../../components/ui/SyncBadge'
+
 const empty = { nome: '', tara_emb: '' }
 
 export default function MarcaManager() {
   const { data: marcas, loading, reload } = useOfflineList(marcasRepository)
+  const syncMap = useSyncStatusMap('conf_marca_item') // <- tabela do repositório
 
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<MarcaItem | null>(null)
@@ -130,13 +134,14 @@ export default function MarcaManager() {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <h3 className="font-semibold text-slate-900 truncate">{m.nome}</h3>
+                  <SyncBadge status={syncMap.get(m.id) ?? 'synced'} />
                   {m.tara_emb != null && (
                     <span className="inline-block mt-2 text-xs font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-600">
                       Tara: {m.tara_emb} kg
                     </span>
                   )}
                 </div>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex gap-1 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => openEdit(m)}
                     className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500"
