@@ -5,6 +5,18 @@ import { supabase } from '../supabase'
 let syncing = false
 let pendingRerun = false
 
+function extractErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message
+
+  // PostgrestError do Supabase: objeto plano com message/details/hint/code
+  if (typeof err === 'object' && err !== null && 'message' in err) {
+    const e = err as { message?: string; details?: string; hint?: string; code?: string }
+    return [e.message, e.details, e.hint].filter(Boolean).join(' — ') || 'Erro sem mensagem'
+  }
+
+  return 'Erro desconhecido ao sincronizar'
+}
+
 /**
  * Dispara o processamento da fila de sincronização.
  * Seguro pra chamar várias vezes seguidas (ex: salvar 3 registros em sequência) —
@@ -50,6 +62,10 @@ async function processItem(item: SyncQueueItem) {
 
       await offlineDb.records.delete([item.table, item.recordId])
     } else {
+      if (!item.payload) {
+        throw new Error('Payload ausente para operação de upsert')
+      }
+
       // upsert + select: pega de volta a versão canônica do servidor
       // (campos default, triggers, created_at etc.) e já deixa o registro
       // local consistente com o que está no banco.
@@ -69,14 +85,12 @@ async function processItem(item: SyncQueueItem) {
 
     await offlineDb.syncQueue.delete(item.id)
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erro desconhecido ao sincronizar'
+    const message = extractErrorMessage(err)
     await offlineDb.syncQueue.update(item.id, {
       status: 'error',
       attempts: item.attempts + 1,
       lastError: message,
     })
-    // não relança — o item fica marcado como 'error' e tenta de novo
-    // na próxima vez que requestSync() rodar (reconexão, próxima ação do usuário, etc.)
   }
 }
 

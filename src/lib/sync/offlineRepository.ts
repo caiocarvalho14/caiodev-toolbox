@@ -1,6 +1,6 @@
 // src/lib/sync/offlineRepository.ts
 import { offlineDb } from '../offlineDb'
-import { requestSync } from './syncEngine'
+import { requestSync } from './syncEngine.ts'
 
 /**
  * Repositório genérico pra qualquer entidade sincronizável (carnes, marcas, etc).
@@ -22,11 +22,18 @@ export function createOfflineRepository<T extends { id: string }>(table: string)
   }
 
   async function save(data: Omit<T, 'id'> & { id?: string }): Promise<T> {
+    console.log('[save] início', data)
+
     const id = data.id ?? crypto.randomUUID()
     const fullData = { ...data, id } as T
     const now = Date.now()
 
+    console.log('[save] gravando records...')
+
     await offlineDb.records.put({ table, id, data: fullData, updatedAt: now })
+
+    console.log('[save] records OK')
+    
     await offlineDb.syncQueue.add({
       id: crypto.randomUUID(),
       table,

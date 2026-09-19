@@ -6,7 +6,6 @@ import { useAuth } from "../contexts/AuthContext";
 export function AutenticatedRoute() {
   const { user, loading } = useAuth();
   const location = useLocation();
-    console.log(user)
   if (loading) return <div>Carregando...</div>;
 
   if (!user) {
