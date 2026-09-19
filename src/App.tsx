@@ -14,8 +14,11 @@ import Login from './pages/Login.tsx';
 import NotFound from './pages/NotFound.tsx';
 
 // modules
-import Conferencia from './pages/modules/Conferencia.tsx';
+import ConferenciaPage from './pages/modules/Conferencia.tsx';
 import Admin from './pages/modules/Admin.tsx';
+import { Toaster } from './components/Toaster'
+// ...
+<Toaster />
 
 function App() {
   return (
@@ -30,7 +33,7 @@ function App() {
           <Route path="/" element={<Home />}></Route>
 
           <Route element={<RouteAccessGuard />}>
-            <Route path='/conferencia' element={<Conferencia />} />
+            <Route path='/conferencia' element={<ConferenciaPage />} />
             <Route path='/admin' element={<Admin />} />
           </Route>
 
