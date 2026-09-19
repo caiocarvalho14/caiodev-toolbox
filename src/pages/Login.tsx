@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Eye, EyeOff, Wrench, LoaderCircle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import RippleButton from '../components/RippleButton'
 
 export default function Login() {
   const { signIn } = useAuth()
@@ -96,18 +97,18 @@ export default function Login() {
               </p>
             )}
 
-            <button
+            <RippleButton
               type="submit"
               disabled={loading}
               className="w-full flex items-center justify-center gap-2 rounded-lg bg-indigo-500 hover:bg-indigo-400
-                         disabled:bg-indigo-500/50 disabled:cursor-not-allowed text-white text-sm font-medium py-2.5 transition-colors"
+             disabled:bg-indigo-500/50 disabled:cursor-not-allowed text-white text-sm font-medium py-2.5 transition-colors"
             >
-              {loading && <LoaderCircle className="w-4 h-4 animate-spin" />}
-              {loading ? 'Entrando...' : 'Entrar'}
-            </button>
-          </form>
-        </div>
+              {loading ? 'Entrando...' : 'Entrar'}{loading && <LoaderCircle className="w-4 h-4 animate-spin" />}
+            </RippleButton>
+            
+        </form>
       </div>
     </div>
+    </div >
   )
 }

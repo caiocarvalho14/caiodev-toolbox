@@ -11,6 +11,7 @@ import { LogoutRoute } from "./components/LogoutButton.tsx";
 // pages
 import Home from "./pages/Home.tsx"
 import Login from './pages/Login.tsx';
+import NotFound from './pages/NotFound.tsx';
 
 // modules
 import Conferencia from './pages/modules/Conferencia.tsx';
@@ -34,6 +35,8 @@ function App() {
           </Route>
 
         </Route>
+
+        <Route path='/*' element={<NotFound/>}/>
       </Routes>
     </BrowserRouter>
   )

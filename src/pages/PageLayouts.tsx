@@ -33,7 +33,7 @@ export default function PageLayout({
   gradient = "from-rose-500 to-red-600",
   activeTabClassName = "border-rose-500 text-rose-600",
   backTo = "/",
-  backLabel = "Hub",
+  backLabel = "Voltar",
   tabs = [],
   defaultTabId,
 }: PageLayoutProps) {
