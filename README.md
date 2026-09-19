@@ -7,3 +7,4 @@ dexie-react-hooks
 -D vite-plugin-pwa
 lucide-react
 -D workbox-window
+pwa-asset-generator@8.1.6
