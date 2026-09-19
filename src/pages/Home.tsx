@@ -1,9 +1,10 @@
-import { LayoutGrid, ArrowRight, LucideToolbox, LogOut , Wrench } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { LayoutGrid, ArrowRight, LucideToolbox, LogOut, Wrench } from 'lucide-react';
 import { useRouteAccess } from '../contexts/RouteAccessContext.tsx';
 
-
-
-const visual = {
+// Record<string, ...> dá o index signature que faltava — sem isso o TS não
+// deixa indexar o objeto com uma string qualquer (rota.path)
+const visual: Record<string, { icon: LucideIcon; gradient: string }> = {
     "/conferencia": { icon: LucideToolbox, gradient: "from-rose-500 to-red-600" },
     "/admin": { icon: LayoutGrid, gradient: "from-indigo-500 to-blue-600" },
 };
@@ -12,7 +13,6 @@ const visualPadrao = { icon: LayoutGrid, gradient: "from-slate-300 to-slate-400"
 
 export default function WorkHub() {
     const { rotasPermitidas, loading } = useRouteAccess();
-    console.log(rotasPermitidas)
     if (loading) {
         return <div className="min-h-screen flex items-center justify-center text-slate-500">Carregando...</div>;
     }
@@ -38,7 +38,6 @@ export default function WorkHub() {
                 <div className="grid sm:grid-cols-2 gap-5">
                     {rotasPermitidas.map((rota) => {
                         const { icon: IconComponent, gradient } = visual[rota.path] ?? visualPadrao;
-                        console.log(rota)
                         return (
                             <a key={rota.id} className="block" href={rota.path}>
                                 <div className="group relative h-full bg-white rounded-2xl border border-slate-200 p-7 transition-all duration-300 hover:shadow-xl hover:shadow-slate-200/60 hover:-translate-y-0.5">

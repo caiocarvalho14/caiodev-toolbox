@@ -12,13 +12,16 @@ import { LogoutRoute } from "./components/LogoutButton.tsx";
 import Home from "./pages/Home.tsx"
 import Login from './pages/Login.tsx';
 
+// modules
+import Conferencia from './pages/modules/Conferencia.tsx';
+import Admin from './pages/modules/Admin.tsx';
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
 
-        <Route path='/login' element={<Login/>}/>
+        <Route path='/login' element={<Login />} />
         <Route path='/logout' element={<LogoutRoute />} />
 
         <Route element={<AutenticatedRoute />}>
@@ -26,7 +29,8 @@ function App() {
           <Route path="/" element={<Home />}></Route>
 
           <Route element={<RouteAccessGuard />}>
-        
+            <Route path='/conferencia' element={<Conferencia />} />
+            <Route path='/admin' element={<Admin />} />
           </Route>
 
         </Route>

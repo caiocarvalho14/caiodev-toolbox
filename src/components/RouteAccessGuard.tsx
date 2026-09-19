@@ -8,7 +8,7 @@ interface RouteAccessGuardProps {
 }
 
 // Assume que já passou pelo AutenticatedRoute — não checa user aqui.
-export function RouteAccessGuard({ redirectTo = "/home" }: RouteAccessGuardProps) {
+export function RouteAccessGuard({ redirectTo = "/" }: RouteAccessGuardProps) {
   const { loading, temAcesso } = useRouteAccess();
   const location = useLocation();
 

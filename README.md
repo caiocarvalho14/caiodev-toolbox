@@ -6,3 +6,4 @@ dexie
 dexie-react-hooks
 -D vite-plugin-pwa
 lucide-react
+-D workbox-window
