@@ -23,8 +23,8 @@ export default defineConfig({
         name: 'caioodev-toolbox',
         short_name: 'toolbox',
         description: 'desenvolvido por caio carvalho',
-        theme_color: '#0f172a',
-        background_color: '#0f172a',
+        theme_color: '#ffffff',
+        background_color: '#ffffff',
         display: 'standalone',
         start_url: '/',
         icons: [

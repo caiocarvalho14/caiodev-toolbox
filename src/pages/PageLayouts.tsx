@@ -49,7 +49,7 @@ export default function PageLayout({
       {/* Header */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-20">
         <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col items-start sm:items-center sm:flex-row gap-4">
             <Link
               to={backTo}
               className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 transition-colors"
@@ -57,13 +57,13 @@ export default function PageLayout({
               <ArrowLeft className="w-4 h-4" />
               {backLabel}
             </Link>
-            <div className="h-5 w-px bg-slate-200" />
-            <div className="flex items-center gap-2.5">
+            <div className="h-5 w-px bg-slate-200 hidden sm:block" />
+            <div className="flex items-center  gap-2.5">
               {Icon && (
                 <div
-                  className={`w-9 h-9 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center`}
+                  className={`w-10 h-10 rounded-lg bg-gradient-to-br ${gradient} hidden sm:flex  items-center justify-center`}
                 >
-                  <Icon className="w-5 h-5 text-white" />
+                  <Icon className={`w-5 h-5 text-white`} />
                 </div>
               )}
               <div>

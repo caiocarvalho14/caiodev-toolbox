@@ -11,6 +11,14 @@ export default function Acougue() {
         )
     }
 
+    function Page1() {
+        return (
+            <>
+                Conferência page 2
+            </>
+        )
+    }
+
     return (
         <PageLayout
             title="Página de Conferência"
@@ -19,6 +27,7 @@ export default function Acougue() {
             gradient="from-rose-500 to-red-600"
             tabs={[
                 { id: "carnes", label: "Carnes", icon: Package, component: Page },
+                { id: "carnes1", label: "Carnes1", icon: Package, component: Page1 },
             ]}
         />
     );

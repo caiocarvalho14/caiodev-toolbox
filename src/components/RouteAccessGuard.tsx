@@ -12,7 +12,7 @@ export function RouteAccessGuard({ redirectTo = "/" }: RouteAccessGuardProps) {
   const { loading, temAcesso } = useRouteAccess();
   const location = useLocation();
 
-  if (loading) return <div>Carregando...</div>;
+  if (loading) return <div className="">Carregando...</div>;
 
   if (!temAcesso(location.pathname)) {
     return <Navigate to={redirectTo} replace />;
