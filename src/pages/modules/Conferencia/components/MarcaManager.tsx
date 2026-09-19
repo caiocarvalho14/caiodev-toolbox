@@ -1,12 +1,12 @@
 // src/modules/conferencia/components/MarcaManager.tsx
 import { useState } from 'react'
 import { Plus, Pencil, Trash2, Search, Tag } from 'lucide-react'
-import { useToast } from '../../../../hooks/useToast'
+import { useToast } from '../../../../hooks/useToast.ts'
 import { Modal } from '../../../../components/ui/Modal.tsx'
-import { ConfirmDialog } from '../../../../components/ui/ConfirmDialog'
-import { useOfflineList } from '../../../../hooks/useOfflineList'
-import { marcasRepository } from '../../../modules/Conferencia/repositories/marcasRepository.ts'
-import type { MarcaItem } from '../../../modules/conferencia/types/Marcas.ts'
+import { ConfirmDialog } from '../../../../components/ui/ConfirmDialog.tsx'
+import { useOfflineList } from '../../../../hooks/useOfflineList.ts'
+import { marcasRepository } from '../repositories/marcasRepository.ts'
+import type { MarcaItem } from '../types/Marcas.ts'
 
 const empty = { nome: '', tara_emb: '' }
 

@@ -1,7 +1,7 @@
 // src/pages/ConferenciaPage.tsx (ou onde você monta a página do módulo)
-import { Tag, ClipboardList, Package, MapPin } from 'lucide-react'
+import { Tag, ClipboardList } from 'lucide-react'
 import PageLayout, { type TabItem } from '../PageLayouts'
-import MarcaManager from '../modules/conferencia/components/MarcaManager'
+import MarcaManager from './conferencia/components/MarcaManager'
 // ainda não criados: ItemManager, LocalManager, RegistroManager
 
 const tabs: TabItem[] = [
