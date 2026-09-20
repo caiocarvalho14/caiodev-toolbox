@@ -3,8 +3,8 @@ import { useState } from 'react'
 import { RefreshCw, WifiOff, CloudUpload } from 'lucide-react'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { usePendingSyncCount } from '../hooks/usePendingSyncCount'
-import { requestSync } from '../lib/sync/syncEngine'
 import { useToast } from '../hooks/useToast'
+import { fullSync } from '../lib/sync/syncEngine'
 
 export function SyncButton() {
   const online = useOnlineStatus()
@@ -17,7 +17,7 @@ export function SyncButton() {
   async function handleSync() {
     setSyncing(true)
     try {
-      await requestSync()
+      await fullSync()
       toast({ title: 'Sincronização concluída' })
     } catch {
       toast({ variant: 'destructive', title: 'Erro ao sincronizar' })

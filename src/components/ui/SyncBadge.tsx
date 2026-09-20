@@ -6,6 +6,8 @@ interface SyncBadgeProps {
   status: RecordSyncStatus
 }
 
+
+
 export function SyncBadge({ status }: SyncBadgeProps) {
   if (status === 'synced') return null // registro ok — sem poluir a UI
 
@@ -33,3 +35,4 @@ export function SyncBadge({ status }: SyncBadgeProps) {
     </span>
   )
 }
+

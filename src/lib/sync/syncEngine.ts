@@ -1,6 +1,7 @@
 // src/lib/sync/syncEngine.ts
 import { offlineDb, type SyncQueueItem } from '../offlineDb'
 import { supabase } from '../supabase'
+import { pullAll } from './pullEngine'
 
 let syncing = false
 let pendingRerun = false
@@ -98,4 +99,10 @@ async function processItem(item: SyncQueueItem) {
 export async function isPendingSync(table: string, id: string): Promise<boolean> {
   const items = await offlineDb.syncQueue.where('table').equals(table).toArray()
   return items.some((i) => i.recordId === id)
+}
+
+/** Fluxo completo: envia pendências locais, depois busca atualizações do servidor. */
+export async function fullSync() {
+  await requestSync() // push
+  await pullAll()      // pull
 }
