@@ -135,7 +135,7 @@ export default function LocalManager() {
                   <h3 className="font-semibold text-slate-900 truncate">{l.nome}</h3>
                   <SyncBadge status={syncMap.get(l.id) ?? 'synced'} />
                 </div>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                <div className="flex gap-1 sm:opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                   <button
                     onClick={() => openEdit(l)}
                     className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500"

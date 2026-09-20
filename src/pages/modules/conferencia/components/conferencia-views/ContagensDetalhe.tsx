@@ -241,7 +241,7 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
             <input
               id="quantidade"
               type="number"
-              step="0.01"
+              step="1"
               value={quantidade}
               onChange={(e) => setQuantidade(Number(e.target.value))}
               placeholder="0"
@@ -275,7 +275,7 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
                   <Plus className="w-3.5 h-3.5" />
                 </button>
               </div>
-              <span className="text-slate-400 text-sm">×</span>
+              <span className="text-slate-400 text-sm">x</span>
               <input
                 type="number"
                 step="1"
@@ -302,11 +302,11 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
           </button>
           <button
             onClick={() => registrarContagem(quantidade - taraTotal)}
-            disabled={registrando}
+            disabled={registrando || quantidade == 0}
             title={taraTotal > 0 ? `Desconta ${taraTotal.toFixed(2)} no total` : 'Sem tara informada'}
             className="px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors disabled:opacity-50"
           >
-            Registrar líquido
+            Registrar líquido {(quantidade > 0 ? `(${quantidade - taraTotal})` : "")}
           </button>
         </div>
       </div>

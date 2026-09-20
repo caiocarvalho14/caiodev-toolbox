@@ -152,7 +152,7 @@ export default function ItemManager() {
                     </span>
                   )}
                 </div>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                <div className="flex gap-1 sm:opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                   <button
                     onClick={() => openEdit(i)}
                     className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500"
