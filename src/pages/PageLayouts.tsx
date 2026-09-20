@@ -78,7 +78,7 @@ export default function PageLayout({
         {/* Tabs */}
         {tabs.length > 0 && (
           <div className="max-w-6xl mx-auto px-6">
-            <div className="flex gap-1 -mb-px">
+            <div className="flex gap-1 -mb-px overflow-x-scroll">
               {tabs.map((t) => {
                 const TabIcon = t.icon;
                 const isActive = activeTab === t.id;
