@@ -12,7 +12,7 @@ export function SyncButton() {
   const [syncing, setSyncing] = useState(false)
   const { toast } = useToast()
 
-  const disabled = !online || syncing || pendingCount === 0
+  const disabled = !online || syncing
 
   async function handleSync() {
     setSyncing(true)
@@ -33,9 +33,9 @@ export function SyncButton() {
       title={
         !online
           ? 'Sem conexão com o servidor'
-          : pendingCount === 0
-            ? 'Nada pendente para sincronizar'
-            : `${pendingCount} pendente(s) — clique para sincronizar`
+          : pendingCount > 0
+            ? `${pendingCount} pendente(s) — clique para sincronizar`
+            : 'Clique para buscar atualizações'
       }
       className="relative inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 transition-colors hover:border-slate-300 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-slate-200 disabled:hover:text-slate-600"
     >
