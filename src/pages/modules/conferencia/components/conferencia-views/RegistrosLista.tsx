@@ -1,15 +1,15 @@
 // src/modules/conferencia/components/conferencia-views/RegistrosLista.tsx
 import { useState } from 'react'
-import { Plus, ClipboardList, ChevronRight, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { Plus, ClipboardList, ChevronRight, Trash2 } from 'lucide-react'
 import { useToast } from '../../../../../hooks/useToast'
 import { Modal } from '../../../../../components/ui/Modal'
+import { ConfirmDialog } from '../../../../../components/ui/ConfirmDialog'
 import { useOfflineList } from '../../../../../hooks/useOfflineList'
 import { registrosRepository } from '../../../../modules/conferencia/repositories/registrosRespoitory.ts'
 import { contagensRepository } from '../../../../modules/conferencia/repositories/contagensRepository'
 import { itensRepository } from '../../../../modules/conferencia/repositories/itensRepository'
 import { marcasRepository } from '../../repositories/marcasRepository.ts'
 import type { Conferencia } from '../../../../modules/conferencia/types/Conferencia'
-import type { MarcaItem } from '../../types/Marcas.ts'
 import type { RegistroConferencia } from '../../../../modules/conferencia/types/registro'
 
 const empty = { item: '', qtd_sistema: '', observacoes: '', data: new Date().toISOString().slice(0, 10) }
@@ -26,19 +26,18 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
   const { data: marcas } = useOfflineList(marcasRepository)
 
   const registros = todosRegistros.filter((r) => r.conferencia === conferencia.id)
+  const itensJaUsados = new Set(registros.map((r) => r.item))
 
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState(empty)
   const [saving, setSaving] = useState(false)
+  const [toDelete, setToDelete] = useState<RegistroConferencia | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const { toast } = useToast()
 
-  // 1. Função para encontrar o objeto completo do item pelo ID
   const getItem = (itemId: string) => itens.find((i) => i.id === itemId)
-
-  // 2. Função para pegar o nome do item
   const itemNome = (itemId: string) => getItem(itemId)?.nome || 'Item não encontrado'
 
-  // 3. Função para pegar o nome da marca a partir do ID do item
   const itemMarcaPorItemId = (itemId: string) => {
     const item = getItem(itemId)
     if (!item || !item.marca) return 'Sem marca'
@@ -61,8 +60,12 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
       toast({ variant: 'destructive', title: 'Selecione um item' })
       return
     }
-    if (!form.qtd_sistema.trim()) {
-      toast({ variant: 'destructive', title: 'Quantidade no sistema é obrigatória' })
+    if (itensJaUsados.has(form.item)) {
+      toast({
+        variant: 'destructive',
+        title: 'Item já incluído',
+        description: 'Esse item já possui um registro nesta conferência.',
+      })
       return
     }
 
@@ -70,7 +73,7 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
       setSaving(true)
       await registrosRepository.save({
         item: form.item,
-        qtd_sistema: Number(form.qtd_sistema),
+        qtd_sistema: 0,
         observacoes: form.observacoes || null,
         data: form.data,
         conferencia: conferencia.id,
@@ -86,6 +89,25 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
       })
     } finally {
       setSaving(false)
+    }
+  }
+
+  const confirmDelete = async () => {
+    if (!toDelete) return
+    try {
+      setDeleting(true)
+      await registrosRepository.remove(toDelete.id)
+      toast({ title: 'Registro removido' })
+      setToDelete(null)
+      await reload()
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao remover',
+        description: err instanceof Error ? err.message : undefined,
+      })
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -116,7 +138,7 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
         </div>
       ) : (
         <div className="w-full overflow-x-auto rounded-xl border border-slate-200 bg-white">
-          <table className="w-full text-left text-sm text-slate-600 min-w-[600px]">
+          <table className="w-full text-left text-sm text-slate-600 min-w-[650px]">
             <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500 border-b border-slate-200">
               <tr>
                 <th className="px-4 py-3">Marca</th>
@@ -124,7 +146,7 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
                 <th className="px-4 py-3 text-right">Qtd. Sistema</th>
                 <th className="px-4 py-3 text-right">Qtd. Físico</th>
                 <th className="px-4 py-3">Status / Divergência</th>
-                <th className="px-4 py-3 w-8"></th>
+                <th className="px-4 py-3 w-16"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -161,8 +183,19 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
                         {`${divergencia > 0 ? '+' : ''}${divergencia.toFixed(2)}`}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <ChevronRight className="w-4 h-4 text-slate-300 transition-transform group-hover:translate-x-0.5 inline-block" />
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setToDelete(r)
+                          }}
+                          className="p-1.5 rounded-md text-slate-400 sm:opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-600 transition-all"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                        <ChevronRight className="w-4 h-4 text-slate-300 transition-transform group-hover:translate-x-0.5" />
+                      </div>
                     </td>
                   </tr>
                 )
@@ -187,25 +220,12 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
             >
               <option value="">Selecione um item</option>
               {itens.map((i) => (
-                <option key={i.id} value={i.id}>
-                   {itemMarcaPorItemId(i.id) || ""} - {i.nome}
+                <option key={i.id} value={i.id} disabled={itensJaUsados.has(i.id)}>
+                  {itemMarcaPorItemId(i.id) || ""} - {i.nome}
+                  {itensJaUsados.has(i.id) ? ' (já incluído)' : ''}
                 </option>
               ))}
             </select>
-          </div>
-          <div>
-            <label htmlFor="qtd_sistema" className="block text-sm font-medium text-slate-700 mb-1.5">
-              Quantidade no sistema *
-            </label>
-            <input
-              id="qtd_sistema"
-              type="number"
-              step="0.1"
-              value={form.qtd_sistema}
-              onChange={(e) => setForm({ ...form, qtd_sistema: e.target.value })}
-              placeholder="Ex: 120.5"
-              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
-            />
           </div>
           <div>
             <label htmlFor="observacoes" className="block text-sm font-medium text-slate-700 mb-1.5">
@@ -238,6 +258,20 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
           </div>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        open={!!toDelete}
+        title="Remover registro?"
+        description={
+          toDelete
+            ? `Tem certeza que deseja remover o registro de "${itemNome(toDelete.item)}"? Todas as pesagens/contagens vinculadas também serão perdidas. Esta ação não pode ser desfeita.`
+            : ''
+        }
+        confirmLabel="Remover"
+        loading={deleting}
+        onCancel={() => setToDelete(null)}
+        onConfirm={confirmDelete}
+      />
     </div>
   )
 }

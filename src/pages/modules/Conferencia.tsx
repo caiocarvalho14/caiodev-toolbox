@@ -5,6 +5,8 @@ import MarcaManager from './conferencia/components/MarcaManager'
 import LocalManager from './conferencia/components/LocalManagers'
 import ItemManager from './conferencia/components/ItemManager'
 import ConferenciaManager from './conferencia/components/ConferenciaManager'
+import RelatorioManager from './conferencia/components/RelatorioManager'
+import { BarChart3 } from 'lucide-react'
 
 
 const tabs: TabItem[] = [
@@ -12,6 +14,7 @@ const tabs: TabItem[] = [
   { id: 'itens', label: 'Itens', icon: Package, component: ItemManager },
   { id: 'marcas', label: 'Marcas', icon: Tag, component: MarcaManager },
   { id: 'locais', label: 'Locais', icon: MapPin, component: LocalManager },
+  { id: 'relatorio', label: 'Relatório', icon: BarChart3, component: RelatorioManager },
 ]
 
 export default function ConferenciaPage() {

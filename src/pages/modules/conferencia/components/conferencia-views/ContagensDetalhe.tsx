@@ -1,5 +1,5 @@
 // src/modules/conferencia/components/conferencia-views/ContagensDetalhe.tsx
-import { useState , useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Minus, Plus, Trash2, Scale, Save } from 'lucide-react'
 import { useToast } from '../../../../../hooks/useToast'
 import { useOfflineList } from '../../../../../hooks/useOfflineList'
@@ -55,6 +55,10 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
 
   const ajustarTara = (delta: number) => {
     setTaraValor((prev) => Math.max(0, Math.round((prev + delta) * 10) / 10))
+  }
+
+  const ajustarTaraQtd = (delta: number) => {
+    setTaraQtd((prev) => Math.max(0, prev + delta))
   }
 
   const registrarContagem = async (valor: number) => {
@@ -225,7 +229,7 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
             <input
               id="quantidade"
               type="number"
-              step={usaTara ? '0.1' : '1'}
+              step={usaTara ? '1' : '1'}
               value={quantidade}
               onChange={(e) => setQuantidade(Number(e.target.value))}
               placeholder="0"
@@ -262,15 +266,33 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
                 </button>
               </div>
               <span className="text-slate-400 text-sm">×</span>
-              <input
-                type="number"
-                step="1"
-                min="0"
-                value={taraQtd}
-                onChange={(e) => setTaraQtd(Number(e.target.value))}
-                title="Quantidade de embalagens"
-                className="w-14 text-center px-1 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
-              />
+              <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => ajustarTaraQtd(-1)}
+                  title="Diminuir caixas"
+                  className="px-2.5 py-2.5 text-slate-500 hover:bg-slate-50 transition-colors"
+                >
+                  <Minus className="w-3.5 h-3.5" />
+                </button>
+                <input
+                  type="number"
+                  step="1"
+                  min="0"
+                  value={taraQtd}
+                  onChange={(e) => setTaraQtd(Number(e.target.value))}
+                  title="Quantidade de embalagens"
+                  className="w-14 text-center px-1 py-2.5 text-sm font-medium text-slate-900 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => ajustarTaraQtd(1)}
+                  title="Aumentar caixas"
+                  className="px-2.5 py-2.5 text-slate-500 hover:bg-slate-50 transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
             {taraTotal > 0 && (
               <p className="text-xs text-slate-400 mt-1">Tara total: {taraTotal.toFixed(2)}</p>
