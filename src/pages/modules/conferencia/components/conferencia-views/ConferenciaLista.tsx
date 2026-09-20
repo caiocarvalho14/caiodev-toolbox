@@ -131,7 +131,7 @@ export default function ConferenciasLista({ onSelect }: Props) {
                 </div>
                 <ChevronRight className="w-4 h-4 text-slate-300 shrink-0 transition-transform group-hover:translate-x-0.5" />
               </div>
-              <div className="flex gap-1 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex gap-1 mt-3 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                 <span
                   onClick={(e) => openEdit(c, e)}
                   className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500"
