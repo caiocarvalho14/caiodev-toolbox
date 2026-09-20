@@ -15,7 +15,7 @@ interface Props {
 }
 
 export default function ContagensDetalhe({ registro: registroProp }: Props) {
-  const { data: registros, reload: reloadRegistros } = useOfflineList(registrosRepository)
+  const { data: registros, reload: reloadRegistros } = useOfflineList(registrosRepository, "conf_registro")
   const { data: todasContagens, loading, reload: reloadContagens } = useOfflineList(contagensRepository)
   const { data: itens } = useOfflineList(itensRepository)
   const { data: marcas } = useOfflineList(marcasRepository)
@@ -334,7 +334,7 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
                 <span className="text-slate-400">· {localNome(c.local)}</span>
                 <button
                   onClick={() => removerContagem(c.id)}
-                  className="ml-0.5 p-0.5 rounded-full text-slate-400 opacity-0 group-hover:opacity-100 hover:bg-slate-200 hover:text-red-600 transition-all"
+                  className="ml-0.5 p-0.5 rounded-full text-slate-400 sm:opacity-0 group-hover:opacity-100 hover:bg-slate-200 hover:text-red-600 transition-all"
                 >
                   <Trash2 className="w-3 h-3" />
                 </button>

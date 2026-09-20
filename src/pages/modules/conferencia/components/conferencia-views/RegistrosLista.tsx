@@ -18,8 +18,8 @@ interface Props {
 }
 
 export default function RegistrosLista({ conferencia, onSelect }: Props) {
-  const { data: todosRegistros, loading, reload } = useOfflineList(registrosRepository)
-  const { data: contagens } = useOfflineList(contagensRepository)
+  const { data: todosRegistros, loading, reload } = useOfflineList(registrosRepository, "conf_registro")
+  const { data: contagens } = useOfflineList(contagensRepository, "conf_contagem")
   const { data: itens } = useOfflineList(itensRepository)
 
   const registros = todosRegistros.filter((r) => r.conferencia === conferencia.id)

@@ -15,7 +15,7 @@ export default function ConferenciaManager() {
   const [view, setView] = useState<View>('lista')
   const [conferenciaAtiva, setConferenciaAtiva] = useState<Conferencia | null>(null)
   const [registroAtivo, setRegistroAtivo] = useState<RegistroConferencia | null>(null)
-  const { data: itens } = useOfflineList(itensRepository)
+  const { data: itens } = useOfflineList(itensRepository, "conf_item")
 
   const abrirConferencia = (c: Conferencia) => {
     setConferenciaAtiva(c)
