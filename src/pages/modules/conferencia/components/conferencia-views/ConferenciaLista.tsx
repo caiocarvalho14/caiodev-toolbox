@@ -1,6 +1,6 @@
 // src/modules/conferencia/components/conferencia-views/ConferenciasLista.tsx
 import { useState } from 'react'
-import { Plus, Pencil, Trash2, ClipboardList, ChevronRight } from 'lucide-react'
+import { Plus, Pencil, Trash2, ClipboardList, ChevronRight, Search, X } from 'lucide-react'
 import { useToast } from '../../../../../hooks/useToast'
 import { Modal } from '../../../../../components/ui/Modal'
 import { ConfirmDialog } from '../../../../../components/ui/ConfirmDialog'
@@ -24,6 +24,9 @@ export default function ConferenciasLista({ onSelect }: Props) {
   const [toDelete, setToDelete] = useState<Conferencia | null>(null)
   const [deleting, setDeleting] = useState(false)
   const { toast } = useToast()
+
+  const [search, setSearch] = useState('')
+  const [dataFiltro, setDataFiltro] = useState('')
 
   const openNew = () => {
     setEditing(null)
@@ -85,14 +88,30 @@ export default function ConferenciasLista({ onSelect }: Props) {
     }
   }
 
+  const filtered = conferencias.filter((c) => {
+    const bateNome = c.nome.toLowerCase().includes(search.toLowerCase())
+    const bateData = !dataFiltro || c.data === dataFiltro
+    return bateNome && bateData
+  })
+
+  const temFiltroAtivo = search.trim() !== '' || dataFiltro !== ''
+
+  const limparFiltros = () => {
+    setSearch('')
+    setDataFiltro('')
+  }
+
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
           <h2 className="text-2xl font-semibold text-slate-900">Conferências</h2>
           <p className="text-sm text-slate-500 mt-0.5">
-            {conferencias.length}{' '}
-            {conferencias.length === 1 ? 'conferência registrada' : 'conferências registradas'}
+            {filtered.length}{' '}
+            {filtered.length === 1 ? 'conferência registrada' : 'conferências registradas'}
+            {temFiltroAtivo && conferencias.length !== filtered.length && (
+              <span className="text-slate-400"> de {conferencias.length}</span>
+            )}
           </p>
         </div>
         <button
@@ -104,16 +123,45 @@ export default function ConferenciasLista({ onSelect }: Props) {
         </button>
       </div>
 
+      <div className="flex flex-col sm:flex-row gap-3 mb-5">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por nome..."
+            className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
+          />
+        </div>
+        <input
+          type="date"
+          value={dataFiltro}
+          onChange={(e) => setDataFiltro(e.target.value)}
+          className="px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
+        />
+        {temFiltroAtivo && (
+          <button
+            onClick={limparFiltros}
+            className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-sm text-slate-500 hover:text-slate-900 transition-colors"
+          >
+            <X className="w-4 h-4" />
+            Limpar
+          </button>
+        )}
+      </div>
+
       {loading ? (
         <div className="text-center py-16 text-slate-400 text-sm">Carregando...</div>
-      ) : conferencias.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div className="text-center py-20 border border-dashed border-slate-200 rounded-2xl bg-white">
           <ClipboardList className="w-10 h-10 mx-auto text-slate-300 mb-3" />
-          <p className="text-slate-500 text-sm">Nenhuma conferência registrada ainda.</p>
+          <p className="text-slate-500 text-sm">
+            {temFiltroAtivo ? 'Nenhuma conferência encontrada.' : 'Nenhuma conferência registrada ainda.'}
+          </p>
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {conferencias.map((c) => (
+          {filtered.map((c) => (
             <button
               key={c.id}
               onClick={() => onSelect(c)}
@@ -121,10 +169,8 @@ export default function ConferenciasLista({ onSelect }: Props) {
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <h3 className="font-semibold text-slate-900">
-                    {new Date(c.data + 'T00:00:00').toLocaleDateString('pt-BR')}
-                  </h3>
-                  {c.nome && <p className="text-sm text-slate-500 mt-0.5">{c.nome}</p>}
+                  {c.nome && <h3 className="font-semibold text-slate-900">{c.nome}</h3>}
+                  {new Date(c.data + 'T00:00:00').toLocaleDateString('pt-BR')}
                   {c.observacao && (
                     <p className="text-xs text-slate-400 truncate mt-1">{c.observacao}</p>
                   )}

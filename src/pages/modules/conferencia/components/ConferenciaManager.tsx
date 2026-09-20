@@ -51,7 +51,7 @@ export default function ConferenciaManager() {
             ...(conferenciaAtiva
               ? [
                   {
-                    label: conferenciaAtiva.nome || new Date(conferenciaAtiva.data + 'T00:00:00').toLocaleDateString('pt-BR'),
+                    label: `${conferenciaAtiva.nome} - ${new Date(conferenciaAtiva.data + 'T00:00:00').toLocaleDateString('pt-BR')}` || new Date(conferenciaAtiva.data + 'T00:00:00').toLocaleDateString('pt-BR'),
                     onClick: view === 'contagens' ? voltarParaRegistros : undefined,
                   },
                 ]
