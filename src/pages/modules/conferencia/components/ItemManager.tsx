@@ -96,7 +96,7 @@ export default function ItemManager() {
   const marcaNome = (id: string | null) => marcas.find((m) => m.id === id)?.nome || ''
 
   const filtered = itens.filter((i) =>
-    [i.nome, marcaNome(i.marca), i.codigo].filter(Boolean).join(' ').toLowerCase().includes(search.toLowerCase())
+    [marcaNome(i.marca), i.nome, marcaNome(i.marca),  i.codigo].filter(Boolean).join(' ').toLowerCase().includes(search.toLowerCase())
   )
 
   return (
@@ -162,7 +162,7 @@ export default function ItemManager() {
                       {marcaNome(i.marca) || '—'}
                     </span>
                   </td>
-                  
+
                   {/* Item */}
                   <td className="px-4 py-3">
                     <div className="font-semibold text-slate-900 max-w-[220px] truncate">
