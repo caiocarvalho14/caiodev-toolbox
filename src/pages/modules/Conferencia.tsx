@@ -24,7 +24,7 @@ export default function ConferenciaPage() {
       activeTabClassName="border-rose-500 text-rose-600"
       backTo="/"
       tabs={tabs}
-      defaultTabId="marcas"
+      defaultTabId="conferencias"
     />
   )
 }
