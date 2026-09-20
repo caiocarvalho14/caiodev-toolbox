@@ -15,8 +15,8 @@ interface Props {
 }
 
 export default function ContagensDetalhe({ registro: registroProp }: Props) {
-  const { data: registros, reload: reloadRegistros } = useOfflineList(registrosRepository, "conf_registro")
-  const { data: todasContagens, loading, reload: reloadContagens } = useOfflineList(contagensRepository, "conf_contagem")
+  const { data: registros, reload: reloadRegistros } = useOfflineList(registrosRepository)
+  const { data: todasContagens, loading, reload: reloadContagens } = useOfflineList(contagensRepository)
   const { data: itens } = useOfflineList(itensRepository)
   const { data: marcas } = useOfflineList(marcasRepository)
   const { data: locais } = useOfflineList(locaisRepository)
@@ -27,16 +27,16 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
   const item = itens.find((i) => i.id === registro.item)
   const marca = item?.marca ? marcas.find((m) => m.id === item.marca) : null
   const taraPadrao = marca?.tara_emb ?? 0
+  const tipoContagem = item?.tipo_contagem ?? 'KG'
+  const usaTara = tipoContagem === 'KG'
 
   // Nova pesagem
   const [quantidade, setQuantidade] = useState(0)
-  const [tipoContagem, setTipoContagem] = useState<'KG' | 'UND'>('KG')
   const [taraValor, setTaraValor] = useState(taraPadrao)
   const [taraQtd, setTaraQtd] = useState(1)
   const [localSelecionado, setLocalSelecionado] = useState(locais[0]?.id ?? '')
   const [registrando, setRegistrando] = useState(false)
 
-  // sempre que trocar de item/registro, reseta a tara sugerida pra o padrão da marca
   useEffect(() => {
     setTaraValor(taraPadrao)
   }, [taraPadrao])
@@ -49,7 +49,7 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
 
   const qtdFisico = contagens.reduce((sum, c) => sum + c.contagem, 0)
   const divergencia = qtdFisico - registro.qtd_sistema
-  const taraTotal = Math.round(taraValor * taraQtd * 100) / 100
+  const taraTotal = usaTara ? Math.round(taraValor * taraQtd * 100) / 100 : 0
 
   const localNome = (id: string) => locais.find((l) => l.id === id)?.nome || 'Local removido'
 
@@ -73,7 +73,6 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
         registro: registro.id,
         local: localSelecionado,
         contagem: Math.round(valor * 100) / 100,
-        tipo_contagem: tipoContagem,
       })
       setQuantidade(0)
       await reloadContagens()
@@ -122,10 +121,12 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
       {/* Cabeçalho do item */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6">
         <h2 className="text-xl font-semibold text-slate-900">{item?.nome ?? 'Item removido'}</h2>
-        {marca && (
+        {(marca || item) && (
           <p className="text-sm text-slate-500 mt-0.5">
-            {marca.nome}
-            {taraPadrao > 0 ? ` · tara padrão ${taraPadrao} kg` : ''}
+            {marca?.nome}
+            {marca && usaTara && taraPadrao > 0 ? ` · tara padrão ${taraPadrao} kg` : ''}
+            {marca ? ' · ' : ''}
+            {tipoContagem}
           </p>
         )}
 
@@ -194,7 +195,7 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
       <div className="bg-white rounded-2xl border border-slate-200 p-6">
         <h3 className="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-1.5">
           <Scale className="w-4 h-4" />
-          Nova pesagem
+          Nova {usaTara ? 'pesagem' : 'contagem'}
         </h3>
 
         <div className="grid sm:grid-cols-2 gap-4 mb-4">
@@ -218,38 +219,23 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
           </div>
 
           <div>
-            <label htmlFor="tipo_contagem" className="block text-xs font-medium text-slate-500 mb-1">
-              Tipo
-            </label>
-            <select
-              id="tipo_contagem"
-              value={tipoContagem}
-              onChange={(e) => setTipoContagem(e.target.value as 'KG' | 'UND')}
-              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
-            >
-              <option value="KG">KG</option>
-              <option value="UND">UND</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="grid sm:grid-cols-2 gap-4 mb-4">
-          <div>
             <label htmlFor="quantidade" className="block text-xs font-medium text-slate-500 mb-1">
               Quantidade ({tipoContagem})
             </label>
             <input
               id="quantidade"
               type="number"
-              step="1"
+              step={usaTara ? '0.1' : '1'}
               value={quantidade}
               onChange={(e) => setQuantidade(Number(e.target.value))}
               placeholder="0"
               className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
             />
           </div>
+        </div>
 
-          <div>
+        {usaTara && (
+          <div className="mb-4">
             <label className="block text-xs font-medium text-slate-500 mb-1">Tara</label>
             <div className="flex items-center gap-2">
               <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden">
@@ -275,7 +261,7 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
                   <Plus className="w-3.5 h-3.5" />
                 </button>
               </div>
-              <span className="text-slate-400 text-sm">x</span>
+              <span className="text-slate-400 text-sm">×</span>
               <input
                 type="number"
                 step="1"
@@ -290,37 +276,49 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
               <p className="text-xs text-slate-400 mt-1">Tara total: {taraTotal.toFixed(2)}</p>
             )}
           </div>
-        </div>
+        )}
 
         <div className="flex gap-2 justify-end">
-          <button
-            onClick={() => registrarContagem(quantidade)}
-            disabled={registrando}
-            className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-700 hover:border-slate-300 transition-colors disabled:opacity-50"
-          >
-            Registrar bruto
-          </button>
-          <button
-            onClick={() => registrarContagem(quantidade - taraTotal)}
-            disabled={registrando || quantidade == 0}
-            title={taraTotal > 0 ? `Desconta ${taraTotal.toFixed(2)} no total` : 'Sem tara informada'}
-            className="px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors disabled:opacity-50"
-          >
-            Registrar líquido {(quantidade > 0 ? `(${quantidade - taraTotal})` : "")}
-          </button>
+          {usaTara ? (
+            <>
+              <button
+                onClick={() => registrarContagem(quantidade)}
+                disabled={registrando}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-700 hover:border-slate-300 transition-colors disabled:opacity-50"
+              >
+                Registrar bruto
+              </button>
+              <button
+                onClick={() => registrarContagem(quantidade - taraTotal)}
+                disabled={registrando || quantidade === 0}
+                title={taraTotal > 0 ? `Desconta ${taraTotal.toFixed(2)} no total` : 'Sem tara informada'}
+                className="px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors disabled:opacity-50"
+              >
+                Registrar líquido {quantidade > 0 ? `(${(quantidade - taraTotal).toFixed(2)})` : ''}
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => registrarContagem(quantidade)}
+              disabled={registrando}
+              className="px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors disabled:opacity-50"
+            >
+              Registrar
+            </button>
+          )}
         </div>
       </div>
 
       {/* Pesagens registradas */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6">
         <h3 className="text-sm font-semibold text-slate-900 mb-4">
-          Pesagens ({contagens.length})
+          {usaTara ? 'Pesagens' : 'Contagens'} ({contagens.length})
         </h3>
 
         {loading ? (
           <p className="text-sm text-slate-400">Carregando...</p>
         ) : contagens.length === 0 ? (
-          <p className="text-sm text-slate-400">Nenhuma pesagem registrada ainda.</p>
+          <p className="text-sm text-slate-400">Nenhum registro ainda.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {contagens.map((c) => (
@@ -329,7 +327,7 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
                 className="group inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1.5 rounded-full bg-slate-100 text-sm text-slate-700"
               >
                 <span className="font-medium">
-                  {c.contagem} {c.tipo_contagem}
+                  {c.contagem} {tipoContagem}
                 </span>
                 <span className="text-slate-400">· {localNome(c.local)}</span>
                 <button

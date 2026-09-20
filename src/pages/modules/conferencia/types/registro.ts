@@ -6,4 +6,4 @@ export interface RegistroConferencia {
   observacoes: string | null
   data: string
   conferencia: string
-}
+} 

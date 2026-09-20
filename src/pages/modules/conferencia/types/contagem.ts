@@ -4,5 +4,4 @@ export interface Contagem {
   registro: string
   local: string
   contagem: number
-  tipo_contagem: 'UND' | 'KG'
 }

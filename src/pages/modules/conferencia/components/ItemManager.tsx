@@ -11,10 +11,10 @@ import { itensRepository } from '../../../modules/conferencia/repositories/itens
 import { marcasRepository } from '../../../modules/conferencia/repositories/marcasRepository'
 import type { Item } from '../types/item'
 
-const empty = { nome: '', marca: '', codigo: '' }
+const empty = { nome: '', marca: '', codigo: '', tipo_contagem: 'KG' as 'UND' | 'KG' }
 
 export default function ItemManager() {
-  const { data: itens, loading, reload } = useOfflineList(itensRepository, 'conf_item')
+  const { data: itens, loading, reload } = useOfflineList(itensRepository)
   const { data: marcas } = useOfflineList(marcasRepository)
   const syncMap = useSyncStatusMap('conf_item')
 
@@ -35,7 +35,12 @@ export default function ItemManager() {
 
   const openEdit = (i: Item) => {
     setEditing(i)
-    setForm({ nome: i.nome || '', marca: i.marca || '', codigo: i.codigo || '' })
+    setForm({
+      nome: i.nome || '',
+      marca: i.marca || '',
+      codigo: i.codigo || '',
+      tipo_contagem: i.tipo_contagem || 'KG',
+    })
     setOpen(true)
   }
 
@@ -53,6 +58,7 @@ export default function ItemManager() {
         nome: form.nome,
         marca: form.marca || null,
         codigo: form.codigo || null,
+        tipo_contagem: form.tipo_contagem,
       })
       toast({ title: editing ? 'Item atualizado' : 'Item cadastrado' })
       setOpen(false)
@@ -146,11 +152,16 @@ export default function ItemManager() {
                   {marcaNome(i.marca) && (
                     <p className="text-sm text-slate-500 truncate mt-0.5">{marcaNome(i.marca)}</p>
                   )}
-                  {i.codigo && (
-                    <span className="inline-block mt-2 text-xs font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-600">
-                      {i.codigo}
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="inline-block text-xs font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                      {i.tipo_contagem}
                     </span>
-                  )}
+                    {i.codigo && (
+                      <span className="inline-block text-xs font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                        {i.codigo}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex gap-1 sm:opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                   <button
@@ -187,6 +198,26 @@ export default function ItemManager() {
               autoFocus
               className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
             />
+          </div>
+
+          <div>
+            <label htmlFor="tipo_contagem" className="block text-sm font-medium text-slate-700 mb-1.5">
+              Tipo de contagem *
+            </label>
+            <select
+              id="tipo_contagem"
+              value={form.tipo_contagem}
+              onChange={(e) =>
+                setForm({ ...form, tipo_contagem: e.target.value as 'UND' | 'KG' })
+              }
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
+            >
+              <option value="KG">KG</option>
+              <option value="UND">UND</option>
+            </select>
+            <p className="text-xs text-slate-400 mt-1.5">
+              Define se as pesagens desse item usam tara (KG) ou são contadas por unidade (UND).
+            </p>
           </div>
 
           <div>

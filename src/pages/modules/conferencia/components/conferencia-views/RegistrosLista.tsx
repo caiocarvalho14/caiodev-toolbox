@@ -7,7 +7,9 @@ import { useOfflineList } from '../../../../../hooks/useOfflineList'
 import { registrosRepository } from '../../../../modules/conferencia/repositories/registrosRespoitory.ts'
 import { contagensRepository } from '../../../../modules/conferencia/repositories/contagensRepository'
 import { itensRepository } from '../../../../modules/conferencia/repositories/itensRepository'
+import { marcasRepository } from '../../repositories/marcasRepository.ts'
 import type { Conferencia } from '../../../../modules/conferencia/types/Conferencia'
+import type { MarcaItem } from '../../types/Marcas.ts'
 import type { RegistroConferencia } from '../../../../modules/conferencia/types/registro'
 
 const empty = { item: '', qtd_sistema: '', observacoes: '', data: new Date().toISOString().slice(0, 10) }
@@ -21,6 +23,7 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
   const { data: todosRegistros, loading, reload } = useOfflineList(registrosRepository, "conf_registro")
   const { data: contagens } = useOfflineList(contagensRepository, "conf_contagem")
   const { data: itens } = useOfflineList(itensRepository)
+  const { data: marcas } = useOfflineList(marcasRepository)
 
   const registros = todosRegistros.filter((r) => r.conferencia === conferencia.id)
 
@@ -29,7 +32,20 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
   const [saving, setSaving] = useState(false)
   const { toast } = useToast()
 
-  const itemNome = (id: string) => itens.find((i) => i.id === id)?.nome || 'Item removido'
+  // 1. Função para encontrar o objeto completo do item pelo ID
+  const getItem = (itemId: string) => itens.find((i) => i.id === itemId)
+
+  // 2. Função para pegar o nome do item
+  const itemNome = (itemId: string) => getItem(itemId)?.nome || 'Item não encontrado'
+
+  // 3. Função para pegar o nome da marca a partir do ID do item
+  const itemMarcaPorItemId = (itemId: string) => {
+    const item = getItem(itemId)
+    if (!item || !item.marca) return 'Sem marca'
+
+    const marca = marcas.find((m) => m.id === item.marca)
+    return marca?.nome || 'Marca não encontrada'
+  }
 
   const qtdFisico = (registroId: string) =>
     contagens.filter((c) => c.registro === registroId).reduce((sum, c) => sum + c.contagem, 0)
@@ -99,38 +115,60 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
           <p className="text-slate-500 text-sm">Nenhum registro criado ainda.</p>
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {registros.map((r) => {
-            const fisico = qtdFisico(r.id)
-            const divergencia = fisico - r.qtd_sistema
-            const ok = Math.abs(divergencia) < 0.001
+        <div className="w-full overflow-x-auto rounded-xl border border-slate-200 bg-white">
+          <table className="w-full text-left text-sm text-slate-600 min-w-[600px]">
+            <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500 border-b border-slate-200">
+              <tr>
+                <th className="px-4 py-3">Marca</th>
+                <th className="px-4 py-3">Item</th>
+                <th className="px-4 py-3 text-right">Qtd. Sistema</th>
+                <th className="px-4 py-3 text-right">Qtd. Físico</th>
+                <th className="px-4 py-3">Status / Divergência</th>
+                <th className="px-4 py-3 w-8"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {registros.map((r) => {
+                const fisico = qtdFisico(r.id)
+                const divergencia = fisico - r.qtd_sistema
+                const ok = Math.abs(divergencia) < 0.001
 
-            return (
-              <button
-                key={r.id}
-                onClick={() => onSelect(r)}
-                className="group text-left bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-slate-300 transition-all"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <h3 className="font-semibold text-slate-900 truncate">{itemNome(r.item)}</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      Sistema: {r.qtd_sistema} · Físico: {fisico.toFixed(2)}
-                    </p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-300 shrink-0 transition-transform group-hover:translate-x-0.5" />
-                </div>
-                <div
-                  className={`inline-flex items-center gap-1.5 mt-3 text-xs font-medium px-2 py-1 rounded-lg ${
-                    ok ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                  }`}
-                >
-                  {ok ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
-                  {ok ? 'Sem divergência' : `Divergência: ${divergencia > 0 ? '+' : ''}${divergencia.toFixed(2)}`}
-                </div>
-              </button>
-            )
-          })}
+                return (
+                  <tr
+                    key={r.id}
+                    onClick={() => onSelect(r)}
+                    className="group cursor-pointer hover:bg-slate-50 transition-colors"
+                  >
+                    <td className="px-4 py-3 font-semibold text-slate-900 max-w-[200px] truncate">
+                      {itemMarcaPorItemId(r.item)}
+                    </td>
+                    <td className="px-4 py-3 font-semibold text-slate-900 max-w-[200px] truncate">
+                      {itemNome(r.item)}
+                    </td>
+                    <td className="px-4 py-3 text-right text-slate-500">
+                      {r.qtd_sistema}
+                    </td>
+                    <td className="px-4 py-3 text-right text-slate-500">
+                      {fisico.toFixed(2)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg ${ok
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-amber-100 text-amber-700'
+                          }`}
+                      >
+                        {`${divergencia > 0 ? '+' : ''}${divergencia.toFixed(2)}`}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <ChevronRight className="w-4 h-4 text-slate-300 transition-transform group-hover:translate-x-0.5 inline-block" />
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 

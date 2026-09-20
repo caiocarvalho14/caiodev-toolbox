@@ -3,10 +3,11 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
+
 export function AutenticatedRoute() {
   const { user, loading } = useAuth();
   const location = useLocation();
-  if (loading) return <div>Carregando...</div>;
+  if (loading) return <div></div>;
 
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
