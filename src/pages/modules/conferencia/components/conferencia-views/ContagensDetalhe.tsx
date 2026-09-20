@@ -16,7 +16,7 @@ interface Props {
 
 export default function ContagensDetalhe({ registro: registroProp }: Props) {
   const { data: registros, reload: reloadRegistros } = useOfflineList(registrosRepository, "conf_registro")
-  const { data: todasContagens, loading, reload: reloadContagens } = useOfflineList(contagensRepository)
+  const { data: todasContagens, loading, reload: reloadContagens } = useOfflineList(contagensRepository, "conf_contagem")
   const { data: itens } = useOfflineList(itensRepository)
   const { data: marcas } = useOfflineList(marcasRepository)
   const { data: locais } = useOfflineList(locaisRepository)

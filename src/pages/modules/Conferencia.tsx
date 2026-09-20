@@ -8,9 +8,9 @@ import ConferenciaManager from './conferencia/components/ConferenciaManager'
 
 
 const tabs: TabItem[] = [
-  { id: 'marcas', label: 'Marcas', icon: Tag, component: MarcaManager },
   { id: 'conferencias', label: 'Conferências', icon: ClipboardList, component: ConferenciaManager },
   { id: 'itens', label: 'Itens', icon: Package, component: ItemManager },
+  { id: 'marcas', label: 'Marcas', icon: Tag, component: MarcaManager },
   { id: 'locais', label: 'Locais', icon: MapPin, component: LocalManager },
 ]
 
