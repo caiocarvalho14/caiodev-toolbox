@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { LayoutGrid, ArrowRight, LucideToolbox, LogOut, Wrench } from 'lucide-react';
+import { LayoutGrid, ArrowRight, LucideToolbox, LogOut, Wrench, Settings } from 'lucide-react';
 import { useRouteAccess } from '../contexts/RouteAccessContext.tsx';
 import HomeCardSkeleton from '../components/HomeCardSkeleton.tsx';
 
@@ -12,21 +12,39 @@ const visual: Record<string, { icon: LucideIcon; gradient: string }> = {
 
 const visualPadrao = { icon: LayoutGrid, gradient: "from-slate-300 to-slate-400" };
 
-
-
 export default function WorkHub() {
     const { rotasPermitidas, loading } = useRouteAccess();
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+            {/* Mini cabeçalho fixo */}
+            <header className="sticky top-0 z-10 bg-white backdrop-blur-sm border-b border-slate-200">
+
+                <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between gap-2">
+                    <span className="inline-flex justify-center  items-center gap-2 font-medium tracking-widest uppercase text-slate-500 ">
+                        CaioDev - ToolBox
+                    </span>
+                    <div className='flex items-center justify-end'>
+                        <button
+                            type="button"
+                            title="Configurações"
+                            className="p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+                        >
+                            <Settings className="w-5 h-5" />
+                        </button>
+                        <a href="/logout"
+                            title="Sair"
+                            className="p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer">
+
+                            <LogOut className="w-5 h-5" />
+                        </a>
+                    </div>
+                </div>
+            </header>
+
             <div className="max-w-5xl mx-auto px-6 py-16 sm:py-24">
                 <div className="mb-14">
-                    <div className='flex justify-between text-xs'>
-                        <span className="inline-flex items-center gap-2 font-medium tracking-widest uppercase text-slate-500 mb-4">
-                            <Wrench className="w-4 h-4" /> CaioDev - ToolBox
-                        </span>
-                        <a href="/logout"><LogOut className='text-slate-500 cursor-pointer' /></a>
-                    </div>
+
                     <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight text-slate-900 mb-4">
                         Centro de ferramentas
                     </h1>
@@ -43,7 +61,6 @@ export default function WorkHub() {
                             return (
                                 <a key={rota.id} className="block" href={rota.path}>
                                     <div className="group relative h-full bg-white rounded-2xl border border-slate-200 p-7 overflow-hidden transition-all duration-300 hover:border-slate-300 hover:shadow-xl hover:shadow-slate-200/70 hover:-translate-y-1">
-                                        {/* Glow decorativo no fundo */}
                                         <div
                                             className={`absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br ${gradient} opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-20`}
                                         />
