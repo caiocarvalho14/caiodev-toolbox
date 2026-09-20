@@ -1,11 +1,10 @@
 // src/lib/sync/offlineRepository.ts
 import { offlineDb } from '../offlineDb'
-import { requestSync } from './syncEngine.ts'
 
 /**
  * Repositório genérico pra qualquer entidade sincronizável (carnes, marcas, etc).
- * Toda escrita passa por: grava local -> enfileira -> tenta sincronizar (se online).
- * A UI nunca espera o Supabase responder pra considerar a ação concluída.
+ * Toda escrita passa por: grava local -> enfileira.
+ * A sincronização com o Supabase agora é manual (botão), não automática.
  */
 export function createOfflineRepository<T extends { id: string }>(table: string) {
   async function list(): Promise<T[]> {
@@ -22,18 +21,12 @@ export function createOfflineRepository<T extends { id: string }>(table: string)
   }
 
   async function save(data: Omit<T, 'id'> & { id?: string }): Promise<T> {
-    console.log('[save] início', data)
-
     const id = data.id ?? crypto.randomUUID()
     const fullData = { ...data, id } as T
     const now = Date.now()
 
-    console.log('[save] gravando records...')
-
     await offlineDb.records.put({ table, id, data: fullData, updatedAt: now })
 
-    console.log('[save] records OK')
-    
     await offlineDb.syncQueue.add({
       id: crypto.randomUUID(),
       table,
@@ -45,7 +38,6 @@ export function createOfflineRepository<T extends { id: string }>(table: string)
       createdAt: now,
     })
 
-    void requestSync()
     return fullData
   }
 
@@ -63,8 +55,6 @@ export function createOfflineRepository<T extends { id: string }>(table: string)
       attempts: 0,
       createdAt: now,
     })
-
-    void requestSync()
   }
 
   return { list, get, save, remove }

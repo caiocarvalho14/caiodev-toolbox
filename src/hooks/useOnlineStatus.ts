@@ -2,23 +2,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 type UseOnlineStatusOptions = {
-  /** URL usada pra testar conexão real. Deve ser leve e sempre disponível.
-   * Default: favicon do próprio site (same-origin, sem problema de CORS). */
   pingUrl?: string
-  /** Intervalo (ms) entre checagens periódicas enquanto a aba está visível.
-   * Default: 30s. */
   intervalMs?: number
-  /** Timeout (ms) pra considerar a checagem como falha. Default: 5s. */
   timeoutMs?: number
 }
 
-// navigator.onLine só diz se a interface de rede está ativa (ex: Wi-Fi
-// conectado), não se há internet de verdade — por isso, além do evento
-// nativo (que serve pra reagir instantaneamente quando o SO detecta que
-// caiu a rede), fazemos uma requisição real pra confirmar.
+const DEFAULT_PING_URL = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/`
+console.log(DEFAULT_PING_URL)
 export function useOnlineStatus(options: UseOnlineStatusOptions = {}) {
   const {
-    pingUrl = `${window.location.origin}/favicon.ico`,
+    pingUrl = DEFAULT_PING_URL,
     intervalMs = 30_000,
     timeoutMs = 5_000,
   } = options
@@ -44,6 +37,10 @@ export function useOnlineStatus(options: UseOnlineStatusOptions = {}) {
         method: 'HEAD',
         cache: 'no-store',
         signal: controller.signal,
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
       })
       setOnline(true)
     } catch {

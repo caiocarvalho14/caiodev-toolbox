@@ -1,6 +1,7 @@
 import React, { useState, type ComponentType } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, type LucideIcon } from "lucide-react";
+import { SyncButton } from '../components/SyncButton'
 
 export interface TabItem {
   id: string;
@@ -15,17 +16,13 @@ interface PageLayoutProps {
   description?: string;
   icon?: LucideIcon;
   gradient?: string;
-  activeTabClassName?: string; // classes Tailwind completas da aba ativa
+  activeTabClassName?: string;
   backTo?: string;
   backLabel?: string;
   tabs?: TabItem[];
   defaultTabId?: string;
 }
 
-/**
- * Layout reutilizável para páginas de módulo (ex: Açougue, futuros módulos do toolbox).
- * Cada seção é descrita em `tabs`: { id, label, icon, component, props }.
- */
 export default function PageLayout({
   title,
   description,
@@ -48,29 +45,33 @@ export default function PageLayout({
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-20">
-        <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
-          <div className="flex flex-col items-start sm:items-center sm:flex-row gap-4">
+        <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between gap-4">
+          <div className="flex flex-col items-start sm:items-center sm:flex-row gap-4 min-w-0">
             <Link
               to={backTo}
-              className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 transition-colors"
+              className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 transition-colors shrink-0"
             >
               <ArrowLeft className="w-4 h-4" />
               {backLabel}
             </Link>
-            <div className="h-5 w-px bg-slate-200 hidden sm:block" />
-            <div className="flex items-center  gap-2.5">
+            <div className="h-5 w-px bg-slate-200 hidden sm:block shrink-0" />
+            <div className="flex items-center gap-2.5 min-w-0">
               {Icon && (
                 <div
-                  className={`w-10 h-10 rounded-lg bg-gradient-to-br ${gradient} hidden sm:flex  items-center justify-center`}
+                  className={`w-10 h-10 rounded-lg bg-gradient-to-br ${gradient} hidden sm:flex items-center justify-center shrink-0`}
                 >
-                  <Icon className={`w-5 h-5 text-white`} />
+                  <Icon className="w-5 h-5 text-white" />
                 </div>
               )}
-              <div>
-                <h1 className="text-lg font-semibold text-slate-900 leading-tight">{title}</h1>
-                {description && <p className="text-xs text-slate-500">{description}</p>}
+              <div className="min-w-0">
+                <h1 className="text-lg font-semibold text-slate-900 leading-tight truncate">{title}</h1>
+                {description && <p className="text-xs text-slate-500 truncate">{description}</p>}
               </div>
             </div>
+          </div>
+
+          <div className="shrink-0">
+            <SyncButton />
           </div>
         </div>
 
@@ -85,11 +86,10 @@ export default function PageLayout({
                   <button
                     key={t.id}
                     onClick={() => setActiveTab(t.id)}
-                    className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                      isActive
-                        ? activeTabClassName
-                        : "border-transparent text-slate-500 hover:text-slate-900"
-                    }`}
+                    className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${isActive
+                      ? activeTabClassName
+                      : "border-transparent text-slate-500 hover:text-slate-900"
+                      }`}
                   >
                     {TabIcon && <TabIcon className="w-4 h-4" />}
                     {t.label}

@@ -3,6 +3,8 @@ import {
   BrowserRouter, Routes, Route,
 } from 'react-router-dom';
 
+// useSyncOnReconnect() // <- desativado por enquanto; sync agora é manual via SyncButton
+
 // components
 import { AutenticatedRoute } from "./components/AutenticatedRoute.tsx";
 import { RouteAccessGuard } from "./components/RouteAccessGuard.tsx";
