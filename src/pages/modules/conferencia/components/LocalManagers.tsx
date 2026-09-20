@@ -13,7 +13,7 @@ import type { LocalContagem } from '../../../modules/conferencia/types/localCont
 const empty = { nome: '' }
 
 export default function LocalManager() {
-  const { data: locais, loading, reload } = useOfflineList(locaisRepository)
+  const { data: locais, loading, reload } = useOfflineList(locaisRepository, 'conf_local_contagem')
   const syncMap = useSyncStatusMap('conf_local_contagem')
 
   const [open, setOpen] = useState(false)

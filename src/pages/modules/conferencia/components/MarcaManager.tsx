@@ -14,7 +14,7 @@ import { SyncBadge } from '../../../../components/ui/SyncBadge'
 const empty = { nome: '', tara_emb: '' }
 
 export default function MarcaManager() {
-  const { data: marcas, loading, reload } = useOfflineList(marcasRepository)
+  const { data: marcas, loading, reload } = useOfflineList(marcasRepository, 'conf_marca_item')
   const syncMap = useSyncStatusMap('conf_marca_item') // <- tabela do repositório
 
   const [open, setOpen] = useState(false)
