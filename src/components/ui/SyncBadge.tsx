@@ -9,7 +9,14 @@ interface SyncBadgeProps {
 
 
 export function SyncBadge({ status }: SyncBadgeProps) {
-  if (status === 'synced') return null // registro ok — sem poluir a UI
+  if (status === 'synced') return (
+    <span
+      title="Sincronizado"
+      className="inline-flex items-center gap-1 text-xs font-medium text-green-600"
+    >
+      <Cloud className="w-3.5 h-3.5" />
+    </span>
+  ) // registro ok — sem poluir a UI
 
   if (status === 'error') {
     return (

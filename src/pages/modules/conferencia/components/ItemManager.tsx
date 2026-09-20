@@ -137,49 +137,86 @@ export default function ItemManager() {
           </p>
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((i) => (
-            <div
-              key={i.id}
-              className="group bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-slate-300 transition-all"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-slate-900 truncate">{i.nome}</h3>
-                    <SyncBadge status={syncMap.get(i.id) ?? 'synced'} />
-                  </div>
-                  {marcaNome(i.marca) && (
-                    <p className="text-sm text-slate-500 truncate mt-0.5">{marcaNome(i.marca)}</p>
-                  )}
-                  <div className="flex items-center gap-2 mt-2">
+        <div className="w-full overflow-x-auto rounded-xl border border-slate-200 bg-white">
+          <table className="w-full text-left text-sm text-slate-600 min-w-[700px]">
+            <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500 border-b border-slate-200">
+              <tr>
+                <th className="px-4 py-3">Marca</th>
+                <th className="px-4 py-3">Item</th>
+                <th className="px-4 py-3">Tipo</th>
+                <th className="px-4 py-3">Código</th>
+                <th className="px-4 py-3">Sincronização</th>
+                <th className="px-4 py-3 w-24"></th>
+              </tr>
+            </thead>
+
+            <tbody className="divide-y divide-slate-100">
+              {filtered.map((i) => (
+                <tr
+                  key={i.id}
+                  className="group hover:bg-slate-50 transition-colors"
+                >
+                  {/* Marca */}
+                  <td className="px-4 py-3">
+                    <span className="text-slate-500 max-w-[180px] truncate block">
+                      {marcaNome(i.marca) || '—'}
+                    </span>
+                  </td>
+                  
+                  {/* Item */}
+                  <td className="px-4 py-3">
+                    <div className="font-semibold text-slate-900 max-w-[220px] truncate">
+                      {i.nome}
+                    </div>
+                  </td>
+
+                  {/* Tipo */}
+                  <td className="px-4 py-3">
                     <span className="inline-block text-xs font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-600">
                       {i.tipo_contagem}
                     </span>
-                    {i.codigo && (
+                  </td>
+
+                  {/* Código */}
+                  <td className="px-4 py-3">
+                    {i.codigo ? (
                       <span className="inline-block text-xs font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-600">
                         {i.codigo}
                       </span>
+                    ) : (
+                      <span className="text-slate-400">—</span>
                     )}
-                  </div>
-                </div>
-                <div className="flex gap-1 sm:opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                  <button
-                    onClick={() => openEdit(i)}
-                    className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500"
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setToDelete(i)}
-                    className="p-1.5 rounded-md hover:bg-red-50 text-slate-500 hover:text-red-600"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
+                  </td>
+
+                  {/* Sincronização */}
+                  <td className="px-4 py-3 ">
+                    <SyncBadge
+                      status={syncMap.get(i.id) ?? 'synced'}
+                    />
+                  </td>
+
+                  {/* Ações */}
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() => openEdit(i)}
+                        className="p-1.5 rounded-md text-slate-400 sm:opacity-0 group-hover:opacity-100 hover:bg-slate-100 hover:text-slate-700 transition-all"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        onClick={() => setToDelete(i)}
+                        className="p-1.5 rounded-md text-slate-400 sm:opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-600 transition-all"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
