@@ -10,7 +10,7 @@ interface RouteAccessGuardProps {
 export function RouteAccessGuard({ redirectTo = "/" }: RouteAccessGuardProps) {
   const { loading, temAcesso } = useRouteAccess();
   const location = useLocation();
-
+  
   if (loading) return <PageLayoutSkeleton />;
 
   if (!temAcesso(location.pathname)) {
