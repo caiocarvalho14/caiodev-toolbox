@@ -14,7 +14,7 @@ import type { Item } from '../types/item'
 const empty = { nome: '', marca: '', codigo: '' }
 
 export default function ItemManager() {
-  const { data: itens, loading, reload } = useOfflineList(itensRepository)
+  const { data: itens, loading, reload } = useOfflineList(itensRepository, 'conf_item')
   const { data: marcas } = useOfflineList(marcasRepository)
   const syncMap = useSyncStatusMap('conf_item')
 
