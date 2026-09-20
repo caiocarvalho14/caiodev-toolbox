@@ -12,6 +12,8 @@ import { marcasRepository } from '../../repositories/marcasRepository.ts'
 import type { Conferencia } from '../../../../modules/conferencia/types/Conferencia'
 import type { RegistroConferencia } from '../../../../modules/conferencia/types/registro'
 
+const SEM_MARCA = '__sem_marca__'
+
 const empty = { item: '', qtd_sistema: '', observacoes: '', data: new Date().toISOString().slice(0, 10) }
 
 interface Props {
@@ -25,16 +27,6 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
   const { data: itens } = useOfflineList(itensRepository)
   const { data: marcas } = useOfflineList(marcasRepository)
 
-  const registros = todosRegistros.filter((r) => r.conferencia === conferencia.id)
-  const itensJaUsados = new Set(registros.map((r) => r.item))
-
-  const [open, setOpen] = useState(false)
-  const [form, setForm] = useState(empty)
-  const [saving, setSaving] = useState(false)
-  const [toDelete, setToDelete] = useState<RegistroConferencia | null>(null)
-  const [deleting, setDeleting] = useState(false)
-  const { toast } = useToast()
-
   const getItem = (itemId: string) => itens.find((i) => i.id === itemId)
   const itemNome = (itemId: string) => getItem(itemId)?.nome || 'Item não encontrado'
 
@@ -46,11 +38,43 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
     return marca?.nome || ""
   }
 
+  const registrosDaConferencia = todosRegistros.filter((r) => r.conferencia === conferencia.id)
+  const itensJaUsados = new Set(registrosDaConferencia.map((r) => r.item))
+
+  const [filtroMarca, setFiltroMarca] = useState('')
+
+  // marcas que realmente aparecem nesta conferência, para não poluir o select
+  const marcasDisponiveis = marcas.filter((m) =>
+    registrosDaConferencia.some((r) => getItem(r.item)?.marca === m.id)
+  )
+
+  const registros = filtroMarca
+    ? registrosDaConferencia.filter((r) => getItem(r.item)?.marca === filtroMarca)
+    : registrosDaConferencia
+
+  const [open, setOpen] = useState(false)
+  const [form, setForm] = useState(empty)
+  const [filtroMarcaModal, setFiltroMarcaModal] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [toDelete, setToDelete] = useState<RegistroConferencia | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const { toast } = useToast()
+
+  // marcas usadas por itens cadastrados (para o filtro do modal)
+  const marcasDoModal = marcas.filter((m) => itens.some((i) => i.marca === m.id))
+
+  const itensFiltradosModal = itens.filter((i) => {
+    if (!filtroMarcaModal) return true
+    if (filtroMarcaModal === SEM_MARCA) return !i.marca
+    return i.marca === filtroMarcaModal
+  })
+
   const qtdFisico = (registroId: string) =>
     contagens.filter((c) => c.registro === registroId).reduce((sum, c) => sum + c.contagem, 0)
 
   const openNew = () => {
     setForm(empty)
+    setFiltroMarcaModal('')
     setOpen(true)
   }
 
@@ -120,13 +144,29 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
             {registros.length} {registros.length === 1 ? 'registro' : 'registros'} nesta conferência
           </p>
         </div>
-        <button
-          onClick={openNew}
-          className="self-start sm:self-auto inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-medium transition-colors hover:bg-slate-800"
-        >
-          <Plus className="w-4 h-4" />
-          Novo registro
-        </button>
+        <div className="flex items-center gap-3">
+          {marcasDisponiveis.length > 0 && (
+            <select
+              value={filtroMarca}
+              onChange={(e) => setFiltroMarca(e.target.value)}
+              className="px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
+            >
+              <option value="">Todas as marcas</option>
+              {marcasDisponiveis.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.nome}
+                </option>
+              ))}
+            </select>
+          )}
+          <button
+            onClick={openNew}
+            className="self-start sm:self-auto inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-medium transition-colors hover:bg-slate-800"
+          >
+            <Plus className="w-4 h-4" />
+            Novo registro
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -134,7 +174,9 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
       ) : registros.length === 0 ? (
         <div className="text-center py-20 border border-dashed border-slate-200 rounded-2xl bg-white">
           <ClipboardList className="w-10 h-10 mx-auto text-slate-300 mb-3" />
-          <p className="text-slate-500 text-sm">Nenhum registro criado ainda.</p>
+          <p className="text-slate-500 text-sm">
+            {filtroMarca ? 'Nenhum registro para essa marca.' : 'Nenhum registro criado ainda.'}
+          </p>
         </div>
       ) : (
         <div className="w-full overflow-x-auto rounded-xl border border-slate-200 bg-white">
@@ -208,6 +250,28 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
       <Modal open={open} onClose={() => setOpen(false)} title="Novo registro">
         <form onSubmit={save} className="space-y-4">
           <div>
+            <label htmlFor="marcaFiltro" className="block text-sm font-medium text-slate-700 mb-1.5">
+              Marca
+            </label>
+            <select
+              id="marcaFiltro"
+              value={filtroMarcaModal}
+              onChange={(e) => {
+                setFiltroMarcaModal(e.target.value)
+                setForm((f) => ({ ...f, item: '' }))
+              }}
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
+            >
+              <option value="">Todas as marcas</option>
+              <option value={SEM_MARCA}>Sem marca</option>
+              {marcasDoModal.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
             <label htmlFor="item" className="block text-sm font-medium text-slate-700 mb-1.5">
               Item *
             </label>
@@ -219,7 +283,7 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
               className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
             >
               <option value="">Selecione um item</option>
-              {itens.map((i) => (
+              {itensFiltradosModal.map((i) => (
                 <option key={i.id} value={i.id} disabled={itensJaUsados.has(i.id)}>
                   {itemMarcaPorItemId(i.id) || ""} - {i.nome}
                   {itensJaUsados.has(i.id) ? ' (já incluído)' : ''}
