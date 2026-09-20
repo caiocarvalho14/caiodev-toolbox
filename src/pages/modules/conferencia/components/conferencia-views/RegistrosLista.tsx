@@ -44,7 +44,7 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
     if (!item || !item.marca) return 'Sem marca'
 
     const marca = marcas.find((m) => m.id === item.marca)
-    return marca?.nome || 'Marca não encontrada'
+    return marca?.nome || ""
   }
 
   const qtdFisico = (registroId: string) =>
@@ -188,7 +188,7 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
               <option value="">Selecione um item</option>
               {itens.map((i) => (
                 <option key={i.id} value={i.id}>
-                  {i.nome}
+                   {itemMarcaPorItemId(i.id) || ""} - {i.nome}
                 </option>
               ))}
             </select>
