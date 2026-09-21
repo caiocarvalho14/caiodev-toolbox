@@ -14,6 +14,7 @@ export function exportarRelatorioPdf(relatorios: RelatorioConferencia[]) {
     const titulo = rel.conferencia.nome
       ? `${rel.conferencia.nome} — ${new Date(rel.conferencia.data + 'T00:00:00').toLocaleDateString('pt-BR')}`
       : new Date(rel.conferencia.data + 'T00:00:00').toLocaleDateString('pt-BR')
+    const observacao = rel.conferencia.observacao ? `Observação: ${rel.conferencia.observacao}` : ``
 
     // Se não sobra espaço nem pro título, pula de página antes de desenhar
     if (cursorY + 20 > alturaPagina - margemInferior) {
@@ -23,9 +24,12 @@ export function exportarRelatorioPdf(relatorios: RelatorioConferencia[]) {
 
     doc.setFontSize(14)
     doc.text(titulo, 14, cursorY)
+    cursorY += 6
+    doc.setFontSize(10)
+    doc.text(observacao, 14, cursorY)
     cursorY += 8
 
-    const head = [['Código', 'Produto', 'Físico', 'Sistema', 'Divergência', ...rel.locaisUsados.map((l) => l.nome)]]
+    const head = [['Código', 'Produto', 'Encontrado', 'Sistema', 'Divergência', ...rel.locaisUsados.map((l) => l.nome)]]
 
     const body = rel.linhas.map((l) => [
       l.codigo ?? '-',
@@ -75,7 +79,7 @@ export function exportarRelatorioPdf(relatorios: RelatorioConferencia[]) {
 
   const nomeArquivo =
     relatorios.length === 1
-      ? `relatorio-${relatorios[0].conferencia.data}.pdf`
+      ? `${relatorios[0].conferencia.nome} - ${relatorios[0].conferencia.data}.pdf`
       : `relatorio-conferencias-${new Date().toISOString().slice(0, 10)}.pdf`
 
   doc.save(nomeArquivo)

@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { LayoutGrid, ArrowRight, LucideToolbox, LogOut, Wrench, Settings } from 'lucide-react';
+import { LayoutGrid, ArrowRight, LucideToolbox, LogOut, UserShield, Settings } from 'lucide-react';
 import { useRouteAccess } from '../contexts/RouteAccessContext.tsx';
 import HomeCardSkeleton from '../components/HomeCardSkeleton.tsx';
 
@@ -7,7 +7,6 @@ import RippleButton from '../components/RippleButton.tsx';
 
 const visual: Record<string, { icon: LucideIcon; gradient: string }> = {
     "/conferencia": { icon: LucideToolbox, gradient: "from-rose-500 to-red-600" },
-    "/admin": { icon: LayoutGrid, gradient: "from-indigo-500 to-blue-600" },
 };
 
 const visualPadrao = { icon: LayoutGrid, gradient: "from-slate-300 to-slate-400" };
@@ -25,6 +24,13 @@ export default function WorkHub() {
                         CaioDev - ToolBox
                     </span>
                     <div className='flex items-center justify-end'>
+                        <button
+                            type="button"
+                            title="Sessão Administrativa"
+                            className="p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+                        >
+                            <UserShield className="w-5 h-5" />
+                        </button>
                         <button
                             type="button"
                             title="Configurações"

@@ -38,31 +38,34 @@ export function montarRelatorio(
   const registros = todosRegistros.filter((r) => r.conferencia === conferencia.id)
   const localIdsUsados = new Set<string>()
 
-  const linhas: RelatorioLinha[] = registros.map((r) => {
-    const item = itens.find((i) => i.id === r.item)
-    const marca = item?.marca ? marcas.find((m) => m.id === item.marca) : null
-    const contagensDoRegistro = todasContagens.filter((c) => c.registro === r.id)
+  const linhas: RelatorioLinha[] = registros
+    .map((r) => {
+      const item = itens.find((i) => i.id === r.item)
+      const marca = item?.marca ? marcas.find((m) => m.id === item.marca) : null
+      const contagensDoRegistro = todasContagens.filter((c) => c.registro === r.id)
 
-    const porLocal: Record<string, number> = {}
-    for (const c of contagensDoRegistro) {
-      localIdsUsados.add(c.local)
-      porLocal[c.local] = (porLocal[c.local] ?? 0) + c.contagem
-    }
+      const porLocal: Record<string, number> = {}
 
-    const fisico = contagensDoRegistro.reduce((sum, c) => sum + c.contagem, 0)
+      for (const c of contagensDoRegistro) {
+        localIdsUsados.add(c.local)
+        porLocal[c.local] = (porLocal[c.local] ?? 0) + c.contagem
+      }
 
-    return {
-      registroId: r.id,
-      codigo: item?.codigo ?? null,
-      nome: item?.nome ?? 'Item removido',
-      marcaNome: marca?.nome ?? '',
-      tipoContagem: item?.tipo_contagem ?? 'KG',
-      sistema: r.qtd_sistema,
-      fisico,
-      divergencia: fisico - r.qtd_sistema,
-      porLocal,
-    }
-  })
+      const fisico = contagensDoRegistro.reduce((sum, c) => sum + c.contagem, 0)
+
+      return {
+        registroId: r.id,
+        codigo: item?.codigo ?? null,
+        nome: item?.nome ?? 'Item removido',
+        marcaNome: marca?.nome ?? '',
+        tipoContagem: item?.tipo_contagem ?? 'KG',
+        sistema: r.qtd_sistema,
+        fisico,
+        divergencia: fisico - r.qtd_sistema,
+        porLocal,
+      }
+    })
+    .sort((a, b) => a.marcaNome.localeCompare(b.marcaNome, 'pt-BR'))
 
   const locaisUsados = locais.filter((l) => localIdsUsados.has(l.id))
   const totalFisico = linhas.reduce((s, l) => s + l.fisico, 0)

@@ -95,16 +95,18 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
 
     try {
       setSaving(true)
-      await registrosRepository.save({
-        item: form.item,
-        qtd_sistema: 0,
-        observacoes: form.observacoes || null,
-        data: form.data,
-        conferencia: conferencia.id,
-      })
-      toast({ title: 'Registro criado' })
-      setOpen(false)
-      await reload()
+      const novoRegistro = await registrosRepository.save({
+      item: form.item,
+      qtd_sistema: 0,
+      observacoes: form.observacoes || null,
+      data: form.data,
+      conferencia: conferencia.id,
+    })
+    toast({ title: 'Registro criado' })
+    setOpen(false)
+    await reload()
+    onSelect(novoRegistro)
+      
     } catch (err) {
       toast({
         variant: 'destructive',
