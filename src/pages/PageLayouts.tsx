@@ -1,7 +1,7 @@
 import React, { useState, type ComponentType } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, type LucideIcon } from "lucide-react";
-import { SyncButton } from '../components/SyncButton'
+import { SyncButton } from "../components/SyncButton";
 
 export interface TabItem {
   id: string;
@@ -43,8 +43,8 @@ export default function PageLayout({
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-20">
+      {/* 1. Header Superior (Móvel / Rola com a página) */}
+      <div className="bg-white  border-slate-200">
         <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between gap-4">
           <div className="flex flex-col items-start sm:items-center sm:flex-row gap-4 min-w-0">
             <Link
@@ -64,8 +64,14 @@ export default function PageLayout({
                 </div>
               )}
               <div className="min-w-0">
-                <h1 className="text-lg font-semibold text-slate-900 leading-tight truncate">{title}</h1>
-                {description && <p className="text-xs text-slate-500 truncate">{description}</p>}
+                <h1 className="text-lg font-semibold text-slate-900 leading-tight truncate">
+                  {title}
+                </h1>
+                {description && (
+                  <p className="text-xs text-slate-500 truncate">
+                    {description}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -74,11 +80,13 @@ export default function PageLayout({
             <SyncButton />
           </div>
         </div>
+      </div>
 
-        {/* Tabs */}
-        {tabs.length > 0 && (
+      {/* 2. Barra de Tabs (Fixa no topo ao rolar) */}
+      {tabs.length > 0 && (
+        <div className="sticky top-0 z-20 bg-white  border-b border-slate-200 shadow-xs">
           <div className="max-w-6xl mx-auto px-6">
-            <div className="flex gap-1 -mb-px sm:overflow-x-hidden overflow-x-scroll">
+            <div className="flex gap-1  -mb-px sm:overflow-x-hidden overflow-x-scroll ">
               {tabs.map((t) => {
                 const TabIcon = t.icon;
                 const isActive = activeTab === t.id;
@@ -86,10 +94,11 @@ export default function PageLayout({
                   <button
                     key={t.id}
                     onClick={() => setActiveTab(t.id)}
-                    className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${isActive
-                      ? activeTabClassName
-                      : "border-transparent text-slate-500 hover:text-slate-900"
-                      }`}
+                    className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                      isActive
+                        ? activeTabClassName
+                        : "border-transparent text-slate-500 hover:text-slate-900"
+                    }`}
                   >
                     {TabIcon && <TabIcon className="w-4 h-4" />}
                     {t.label}
@@ -98,10 +107,10 @@ export default function PageLayout({
               })}
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Conteúdo da seção ativa */}
+      {/* 3. Conteúdo da seção ativa */}
       <div className="max-w-6xl mx-auto px-6 py-8">
         {ActiveComponent && <ActiveComponent {...(active?.props || {})} />}
       </div>
