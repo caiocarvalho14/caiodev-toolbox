@@ -1,6 +1,6 @@
 // src/components/SyncButton.tsx
 import { useState } from 'react'
-import { RefreshCw, WifiOff, CloudUpload } from 'lucide-react'
+import { RefreshCw, WifiOff, CloudDownload } from 'lucide-react'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { usePendingSyncCount } from '../hooks/usePendingSyncCount'
 import { useToast } from '../hooks/useToast'
@@ -44,7 +44,7 @@ export function SyncButton() {
       ) : syncing ? (
         <RefreshCw className="w-4 h-4 animate-spin" />
       ) : (
-        <CloudUpload className="w-4 h-4" />
+        <CloudDownload className="w-4 h-4" />
       )}
       Sincronizar
       {pendingCount > 0 && (
