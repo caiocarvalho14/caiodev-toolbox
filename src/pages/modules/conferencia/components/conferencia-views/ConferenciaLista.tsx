@@ -15,7 +15,7 @@ interface Props {
 }
 
 export default function ConferenciasLista({ onSelect }: Props) {
-  const { data: conferencias, loading, reload } = useOfflineList(conferenciasRepository)
+  const { data: conferencias, loading, reload } = useOfflineList(conferenciasRepository, "conf_conferencia")
 
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Conferencia | null>(null)

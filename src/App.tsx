@@ -9,15 +9,16 @@ import {
 import { AutenticatedRoute } from "./components/AutenticatedRoute.tsx";
 import { RouteAccessGuard } from "./components/RouteAccessGuard.tsx";
 import { LogoutRoute } from "./components/LogoutButton.tsx";
+import Layout from './components/Layout.tsx';
 
 // pages
 import Home from "./pages/Home.tsx"
 import Login from './pages/Login.tsx';
 import NotFound from './pages/NotFound.tsx';
+import AdminPage from './pages/modules/Admin.tsx';
 
 // modules
 import ConferenciaPage from './pages/modules/Conferencia.tsx';
-import Admin from './pages/modules/Admin.tsx';
 import { Toaster } from './components/Toaster'
 // ...
 <Toaster />
@@ -32,16 +33,18 @@ function App() {
 
         <Route element={<AutenticatedRoute />}>
 
-          <Route path="/" element={<Home />}></Route>
+          <Route element={<Layout />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/admin" element={<AdminPage />} />
+          </Route>
 
           <Route element={<RouteAccessGuard />}>
             <Route path='/conferencia' element={<ConferenciaPage />} />
-            <Route path='/admin' element={<Admin />} />
           </Route>
 
         </Route>
 
-        <Route path='/*' element={<NotFound/>}/>
+        <Route path='/*' element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   )

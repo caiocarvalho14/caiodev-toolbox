@@ -15,38 +15,9 @@ export default function WorkHub() {
     const { rotasPermitidas, loading } = useRouteAccess();
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
-            {/* Mini cabeçalho fixo */}
-            <header className="sticky top-0 z-10 bg-white backdrop-blur-sm border-b border-slate-200">
-
-                <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between gap-2">
-                    <span className="inline-flex justify-center  items-center gap-2 font-medium tracking-widest uppercase text-slate-500 ">
-                        CaioDev - ToolBox
-                    </span>
-                    <div className='flex items-center justify-end'>
-                        <button
-                            type="button"
-                            title="Sessão Administrativa"
-                            className="p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
-                        >
-                            <UserShield className="w-5 h-5" />
-                        </button>
-                        <button
-                            type="button"
-                            title="Configurações"
-                            className="p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
-                        >
-                            <Settings className="w-5 h-5" />
-                        </button>
-                        <a href="/logout"
-                            title="Sair"
-                            className="p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer">
-
-                            <LogOut className="w-5 h-5" />
-                        </a>
-                    </div>
-                </div>
-            </header>
+        <>
+        <div className=" bg-gradient-to-b from-slate-50 to-white">
+            
 
             <div className="max-w-5xl mx-auto px-6 py-16 sm:py-24">
                 <div className="mb-14">
@@ -93,5 +64,7 @@ export default function WorkHub() {
                 </div>
             </div>
         </div>
+
+        </>
     );
 }

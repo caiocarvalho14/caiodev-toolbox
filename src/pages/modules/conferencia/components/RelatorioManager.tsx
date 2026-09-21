@@ -14,12 +14,12 @@ import { RelatorioTabela } from './relatorio-views/RelatorioTabela'
 import { RelatorioInsights } from './relatorio-views/RelatorioInsights'
 
 export default function RelatorioManager() {
-  const { data: conferencias, loading } = useOfflineList(conferenciasRepository)
-  const { data: registros } = useOfflineList(registrosRepository)
-  const { data: contagens } = useOfflineList(contagensRepository)
-  const { data: itens } = useOfflineList(itensRepository)
-  const { data: marcas } = useOfflineList(marcasRepository)
-  const { data: locais } = useOfflineList(locaisRepository)
+  const { data: conferencias, loading } = useOfflineList(conferenciasRepository, "conf_conferencia")
+  const { data: registros } = useOfflineList(registrosRepository, "conf_registro")
+  const { data: contagens } = useOfflineList(contagensRepository, "conf_contagem")
+  const { data: itens } = useOfflineList(itensRepository, "conf_item")
+  const { data: marcas } = useOfflineList(marcasRepository, "conf_marca_item")
+  const { data: locais } = useOfflineList(locaisRepository, "conf_local_contagem")
 
   const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set())
 

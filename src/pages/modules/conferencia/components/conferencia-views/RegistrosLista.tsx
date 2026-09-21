@@ -24,8 +24,8 @@ interface Props {
 export default function RegistrosLista({ conferencia, onSelect }: Props) {
   const { data: todosRegistros, loading, reload } = useOfflineList(registrosRepository, "conf_registro")
   const { data: contagens } = useOfflineList(contagensRepository, "conf_contagem")
-  const { data: itens } = useOfflineList(itensRepository)
-  const { data: marcas } = useOfflineList(marcasRepository)
+  const { data: itens } = useOfflineList(itensRepository, "conf_item")
+  const { data: marcas } = useOfflineList(marcasRepository, "conf_marca_item")
 
   const getItem = (itemId: string) => itens.find((i) => i.id === itemId)
   const itemNome = (itemId: string) => getItem(itemId)?.nome || 'Item não encontrado'

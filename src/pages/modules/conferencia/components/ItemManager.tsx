@@ -14,8 +14,8 @@ import type { Item } from '../types/item'
 const empty = { nome: '', marca: '', codigo: '', tipo_contagem: 'KG' as 'UND' | 'KG' }
 
 export default function ItemManager() {
-  const { data: itens, loading, reload } = useOfflineList(itensRepository)
-  const { data: marcas } = useOfflineList(marcasRepository)
+  const { data: itens, loading, reload } = useOfflineList(itensRepository, "conf_item")
+  const { data: marcas } = useOfflineList(marcasRepository, "conf_marca_item")
   const syncMap = useSyncStatusMap('conf_item')
 
   const [open, setOpen] = useState(false)

@@ -9,13 +9,16 @@ import App from './App.tsx'
 // providers
 import { AuthProvider } from './contexts/AuthContext.tsx'
 import { RouteAccessProvider } from './contexts/RouteAccessContext.tsx'
+import { CargoProvider } from './contexts/CargoContext.tsx';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthProvider>
       <RouteAccessProvider>
-        <PwaUpdatePrompt/>
-        <App />
+        <CargoProvider>
+          <PwaUpdatePrompt />
+          <App />
+        </CargoProvider>
       </RouteAccessProvider>
     </AuthProvider>
   </StrictMode>,

@@ -15,6 +15,12 @@ export type CachedRotas = {
   updatedAt: number
 }
 
+export type CachedCargos = {
+  userId: string
+  cargos: string[] // nomes dos cargos (ex: ['admin', 'conferente'])
+  updatedAt: number
+}
+
 // Estado local "atual" de qualquer registro sincronizável (carnes, marcas, etc.)
 // `table` é o nome da tabela no Supabase — permite usar um único store do Dexie
 // pra qualquer entidade futura, sem precisar mexer no schema a cada módulo novo.
@@ -54,6 +60,7 @@ class OfflineDB extends Dexie {
   records!: Table<LocalRecord, [string, string]>
   syncQueue!: Table<SyncQueueItem, string>
   syncMeta!: Table<SyncMeta, string>
+  cargosUsuario!: Table<CachedCargos, string>
 
   constructor() {
     super('toolbox-offline')
@@ -63,11 +70,15 @@ class OfflineDB extends Dexie {
       rotasPermitidas: 'userId',
     })
 
-    // v2: infraestrutura de sincronização local -> Supabase (outbox pattern)
     this.version(2).stores({
       records: '[table+id], table',
       syncQueue: 'id, table, status, createdAt',
       syncMeta: 'table',
+    })
+
+    // v3: cache de cargos do usuário
+    this.version(3).stores({
+      cargosUsuario: 'userId',
     })
   }
 }
