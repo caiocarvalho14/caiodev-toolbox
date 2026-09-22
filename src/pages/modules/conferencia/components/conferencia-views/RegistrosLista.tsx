@@ -38,6 +38,13 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
     return marca?.nome || ""
   }
 
+  const itemCodigoPorItemId = (itemId: string) => {
+    const item = getItem(itemId)
+    if (!item || !item.codigo) return 'Sem marca'
+
+    return item.codigo || ""
+  }
+
   const registrosDaConferencia = todosRegistros.filter((r) => r.conferencia === conferencia.id)
   const itensJaUsados = new Set(registrosDaConferencia.map((r) => r.item))
 
@@ -96,17 +103,17 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
     try {
       setSaving(true)
       const novoRegistro = await registrosRepository.save({
-      item: form.item,
-      qtd_sistema: 0,
-      observacoes: form.observacoes || null,
-      data: form.data,
-      conferencia: conferencia.id,
-    })
-    toast({ title: 'Registro criado' })
-    setOpen(false)
-    await reload()
-    onSelect(novoRegistro)
-      
+        item: form.item,
+        qtd_sistema: 0,
+        observacoes: form.observacoes || null,
+        data: form.data,
+        conferencia: conferencia.id,
+      })
+      toast({ title: 'Registro criado' })
+      setOpen(false)
+      await reload()
+      onSelect(novoRegistro)
+
     } catch (err) {
       toast({
         variant: 'destructive',
@@ -185,6 +192,7 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
           <table className="w-full text-left text-sm text-slate-600 min-w-[650px]">
             <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500 border-b border-slate-200">
               <tr>
+                <th className="px-4 py-3">Código</th>
                 <th className="px-4 py-3">Marca</th>
                 <th className="px-4 py-3">Item</th>
                 <th className="px-4 py-3 text-right">Qtd. Sistema</th>
@@ -205,6 +213,9 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
                     onClick={() => onSelect(r)}
                     className="group cursor-pointer hover:bg-slate-50 transition-colors"
                   >
+                    <td className="px-4 py-3 font-semibold text-slate-900 max-w-[200px] truncate">
+                      {itemCodigoPorItemId(r.item)}
+                    </td>
                     <td className="px-4 py-3 font-semibold text-slate-900 max-w-[200px] truncate">
                       {itemMarcaPorItemId(r.item)}
                     </td>

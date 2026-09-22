@@ -17,9 +17,9 @@ interface Props {
 export default function ContagensDetalhe({ registro: registroProp }: Props) {
   const { data: registros, reload: reloadRegistros } = useOfflineList(registrosRepository, "conf_registro")
   const { data: todasContagens, loading, reload: reloadContagens } = useOfflineList(contagensRepository, "conf_contagem")
-  const { data: itens } = useOfflineList(itensRepository)
-  const { data: marcas } = useOfflineList(marcasRepository)
-  const { data: locais } = useOfflineList(locaisRepository)
+  const { data: itens } = useOfflineList(itensRepository, "conf_item")
+  const { data: marcas } = useOfflineList(marcasRepository, "conf_marca_item")
+  const { data: locais } = useOfflineList(locaisRepository, "conf_local_contagem")
 
   const registro = registros.find((r) => r.id === registroProp.id) ?? registroProp
   const contagens = todasContagens.filter((c) => c.registro === registro.id)
@@ -34,8 +34,18 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
   const [quantidade, setQuantidade] = useState(0)
   const [taraValor, setTaraValor] = useState(taraPadrao)
   const [taraQtd, setTaraQtd] = useState(1)
-  const [localSelecionado, setLocalSelecionado] = useState(locais[0]?.id ?? '')
   const [registrando, setRegistrando] = useState(false)
+
+  const [localSelecionado, setLocalSelecionado] = useState(() => {
+    const salvo = localStorage.getItem('localSelecionado')
+    return salvo ?? locais[0]?.id ?? ''
+  })
+
+  useEffect(() => {
+    if (localSelecionado) {
+      localStorage.setItem('localSelecionado', localSelecionado)
+    }
+  }, [localSelecionado])
 
   useEffect(() => {
     setTaraValor(taraPadrao)
@@ -124,10 +134,9 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
     <div className="space-y-6">
       {/* Cabeçalho do item */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6">
-        <h2 className="text-xl font-semibold text-slate-900">{item?.nome ?? 'Item removido'}</h2>
+        <h2 className="text-xl font-semibold text-slate-900">{marca?.nome} - {item?.nome ?? 'Item removido'} - {item?.codigo}</h2>
         {(marca || item) && (
           <p className="text-sm text-slate-500 mt-0.5">
-            {marca?.nome}
             {marca && usaTara && taraPadrao > 0 ? ` · tara padrão ${taraPadrao} kg` : ''}
             {marca ? ' · ' : ''}
             {tipoContagem}
@@ -158,11 +167,10 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Divergência</label>
             <div
-              className={`px-3 py-2 rounded-lg text-sm font-medium ${
-                Math.abs(divergencia) < 0.001
+              className={`px-3 py-2 rounded-lg text-sm font-medium ${Math.abs(divergencia) < 0.001
                   ? 'bg-emerald-50 text-emerald-700'
                   : 'bg-amber-50 text-amber-700'
-              }`}
+                }`}
             >
               {divergencia > 0 ? '+' : ''}
               {divergencia.toFixed(2)}
