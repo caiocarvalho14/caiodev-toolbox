@@ -14,7 +14,7 @@ async function usuarioEhAdmin(usuarioId: string): Promise<boolean> {
     .eq('usuario', usuarioId)
 
   if (error) return false
-  return (data ?? []).some((row: any) => row.cargo?.cargo === 'admin')
+  return (data ?? []).some((row: any) => row.cargo?.cargo === 'administrador')
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
