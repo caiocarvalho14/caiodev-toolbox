@@ -49,7 +49,7 @@ export function SyncButton() {
       Sincronizar
       {pendingCount > 0 && (
         <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-white text-[10px] font-semibold">
-          {pendingCount}
+          {pendingCount > 9 ? "9+" : pendingCount}
         </span>
       )}
     </button>

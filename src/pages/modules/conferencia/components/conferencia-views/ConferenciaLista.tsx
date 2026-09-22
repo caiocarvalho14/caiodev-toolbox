@@ -6,9 +6,12 @@ import { Modal } from '../../../../../components/ui/Modal'
 import { ConfirmDialog } from '../../../../../components/ui/ConfirmDialog'
 import { useOfflineList } from '../../../../../hooks/useOfflineList'
 import { conferenciasRepository } from '../../../../modules/conferencia/repositories/conferenciaRepository'
+import { modelosRepository } from '../../../../modules/conferencia/repositories/modeloRepository'
+import { modeloItensRepository } from '../../../../modules/conferencia/repositories/modeloItemRepository'
+import { registrosRepository } from '../../../../modules/conferencia/repositories/registrosRespoitory'
 import type { Conferencia } from '../../../../modules/conferencia/types/Conferencia'
 
-const empty = { nome: '', data: new Date().toISOString().slice(0, 10), observacao: '' }
+const empty = { nome: '', data: new Date().toISOString().slice(0, 10), observacao: '', modelo: '' }
 
 interface Props {
   onSelect: (conferencia: Conferencia) => void
@@ -16,6 +19,8 @@ interface Props {
 
 export default function ConferenciasLista({ onSelect }: Props) {
   const { data: conferencias, loading, reload } = useOfflineList(conferenciasRepository, "conf_conferencia")
+  const { data: modelos } = useOfflineList(modelosRepository, "conf_modelo")
+  const { data: modeloItens } = useOfflineList(modeloItensRepository, "conf_modelo_item")
 
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Conferencia | null>(null)
@@ -37,7 +42,7 @@ export default function ConferenciasLista({ onSelect }: Props) {
   const openEdit = (c: Conferencia, e: React.MouseEvent) => {
     e.stopPropagation()
     setEditing(c)
-    setForm({ nome: c.nome || '', data: c.data, observacao: c.observacao || '' })
+    setForm({ nome: c.nome || '', data: c.data, observacao: c.observacao || '', modelo: '' })
     setOpen(true)
   }
 
@@ -49,13 +54,34 @@ export default function ConferenciasLista({ onSelect }: Props) {
     }
     try {
       setSaving(true)
-      await conferenciasRepository.save({
+      const conferenciaSalva = await conferenciasRepository.save({
         id: editing?.id,
         nome: form.nome,
         data: form.data,
         observacao: form.observacao,
       })
-      toast({ title: editing ? 'Conferência atualizada' : 'Conferência criada' })
+
+      // só na criação (não na edição) aplica o modelo selecionado
+      if (!editing && form.modelo) {
+        const itensDoModelo = modeloItens.filter((mi) => mi.modelo === form.modelo)
+        for (const mi of itensDoModelo) {
+          await registrosRepository.save({
+            item: mi.item,
+            qtd_sistema: 0,
+            observacoes: null,
+            data: form.data,
+            conferencia: conferenciaSalva.id,
+          })
+        }
+      }
+
+      toast({
+        title: editing
+          ? 'Conferência atualizada'
+          : form.modelo
+            ? 'Conferência criada com itens do modelo'
+            : 'Conferência criada',
+      })
       setOpen(false)
       await reload()
     } catch (err) {
@@ -100,6 +126,9 @@ export default function ConferenciasLista({ onSelect }: Props) {
     setSearch('')
     setDataFiltro('')
   }
+
+  const qtdItensDoModelo = (modeloId: string) =>
+    modeloItens.filter((mi) => mi.modelo === modeloId).length
 
   return (
     <div>
@@ -226,6 +255,31 @@ export default function ConferenciasLista({ onSelect }: Props) {
               className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
             />
           </div>
+
+          {!editing && modelos.length > 0 && (
+            <div>
+              <label htmlFor="modelo" className="block text-sm font-medium text-slate-700 mb-1.5">
+                Modelo
+              </label>
+              <select
+                id="modelo"
+                value={form.modelo}
+                onChange={(e) => setForm({ ...form, modelo: e.target.value })}
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
+              >
+                <option value="">Nenhum (conferência em branco)</option>
+                {modelos.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.nome} ({qtdItensDoModelo(m.id)} {qtdItensDoModelo(m.id) === 1 ? 'item' : 'itens'})
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-slate-400 mt-1.5">
+                Os itens do modelo selecionado serão adicionados automaticamente a esta conferência.
+              </p>
+            </div>
+          )}
+
           <div>
             <label htmlFor="observacao" className="block text-sm font-medium text-slate-700 mb-1.5">
               Observação
