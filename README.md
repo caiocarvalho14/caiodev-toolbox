@@ -73,6 +73,11 @@ Esse desenho garante que a pessoa fazendo a conferência físico nunca é interr
 - Dados estruturados alimentando análises em Power BI, algo impossível no processo anterior
 - Sistema funcional mesmo em áreas sem conexão de internet confiável
 
+
+![Página inicial de conferência](./public/screenshot1.png)
+![Página de registros de cada conferência](./public/screenshot2.png)
+![Página de emissão de relatórios](./public/screenshot3.png)
+
 ---
 
 ## Autor
