@@ -82,4 +82,4 @@ Esse desenho garante que a pessoa fazendo a conferência físico nunca é interr
 
 ## Autor
 
-Desenvolvido por Caio Carvalho — estudante de Desenvolvimento Web (SENAI), stack principal em React/TypeScript/Supabase.
+Desenvolvido por Caio Carvalho — stack principal em React/TypeScript/Supabase.
