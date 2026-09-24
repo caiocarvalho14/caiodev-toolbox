@@ -35,19 +35,15 @@ O primeiro módulo, **Conferência**, resolve o problema descrito acima:
 
 ## Stack técnica e decisões de arquitetura
 
-| Frontend | React + TypeScript + Vite | Tipagem estática para reduzir erros em regras de negócio (cálculo de tara, divergência); build rápido |
-
-| Estilo | Tailwind CSS |
-
-| Backend / Banco | Supabase (PostgreSQL) | Banco relacional real, Row Level Security nativo, API REST automática |
-
-| Autenticação e permissões | Supabase Auth + RLS | Controle de acesso por rota e por cargo, aplicado no nível do banco — não só na interface |
-
-| Armazenamento local | Dexie (IndexedDB) | Necessário para o funcionamento offline (detalhado abaixo) |
-
-| Geração de PDF | jsPDF + jsPDF-autotable | Relatórios exportáveis diretamente no navegador, sem backend dedicado |
-
-| Análise de dados | Power BI | Camada de BI conectada aos dados operacionais coletados pelo módulo |
+| Camada | Tecnologia | Descrição |
+|---|---|---|
+| **Frontend** | <img src="https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black" /> <img src="https://img.shields.io/badge/TypeScript-3178c6?style=for-the-badge&logo=typescript&logoColor=white" /> <img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" /> |  Tipagem estática para reduzir erros em regras de negócio (cálculo de tara, divergência); build rápido |
+| **Estilo** | <img src="https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" /> | Estilização baseada em utilitários, permitindo criar uma interface responsiva e consistente |
+| **Backend / Banco** | <img src="https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" /> <img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" /> | Banco relacional real, Row Level Security nativo e API REST automática |
+| **Autenticação e permissões** | <img src="https://img.shields.io/badge/Supabase_Auth-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" /> |  Controle de acesso por rota e por cargo, aplicado no nível do banco — não só na interface |
+| **Armazenamento local** | <img src="https://img.shields.io/badge/IndexedDB-000000?style=for-the-badge&logo=googlechrome&logoColor=white" /> <img src="https://img.shields.io/badge/Dexie.js-FF6F00?style=for-the-badge&logo=javascript&logoColor=white" /> | Persistência local para permitir funcionamento offline e carregamento rápido dos dados já sincronizados |
+| **Geração de PDF** | <img src="https://img.shields.io/badge/jsPDF-F40F02?style=for-the-badge&logo=adobeacrobatreader&logoColor=white" />  | Geração de relatórios e tabelas em PDF diretamente no navegador, sem backend dedicado |
+| **Análise de dados** | <img src="https://img.shields.io/badge/Power_BI-F2C811?style=for-the-badge&logo=powerbi&logoColor=black" /> | Camada de BI conectada aos dados operacionais coletados pelo módulo |
 
 ### Por que offline-first
 
