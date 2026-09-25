@@ -29,9 +29,11 @@ export default function ConferenciasLista({ onSelect }: Props) {
   const [toDelete, setToDelete] = useState<Conferencia | null>(null)
   const [deleting, setDeleting] = useState(false)
   const { toast } = useToast()
-
+  const hoje = new Date()
+  const dataFormatada = hoje.toISOString().split('T')[0];
+  const [dataFiltro, setDataFiltro] = useState(dataFormatada)
+  
   const [search, setSearch] = useState('')
-  const [dataFiltro, setDataFiltro] = useState('')
 
   const openNew = () => {
     setEditing(null)
@@ -185,7 +187,7 @@ export default function ConferenciasLista({ onSelect }: Props) {
         <div className="text-center py-20 border border-dashed border-slate-200 rounded-2xl bg-white">
           <ClipboardList className="w-10 h-10 mx-auto text-slate-300 mb-3" />
           <p className="text-slate-500 text-sm">
-            {temFiltroAtivo ? 'Nenhuma conferência encontrada.' : 'Nenhuma conferência registrada ainda.'}
+            {temFiltroAtivo ? (dataFiltro == dataFormatada ? 'Nenhuma conferência registrada hoje.' : 'Nenhuma conferência encontrada.') : 'Nenhuma conferência registrada ainda.'}
           </p>
         </div>
       ) : (
