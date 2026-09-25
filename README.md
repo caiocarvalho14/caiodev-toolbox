@@ -1,6 +1,6 @@
 # Toolbox — Plataforma interna de gestão operacional (ainda em desenvolvimento)
 
-Plataforma web (PWA) desenvolvida para centralizar ferramentas internas de operação, substituindo processos manuais por soluções digitais rastreáveis. O primeiro módulo implementado, **Conferência**, digitaliza o processo diário de conferência de estoque.
+Plataforma web (PWA) desenvolvida para centralizar ferramentas internas de operação, substituindo processos manuais por soluções digitais rastreáveis.
 
 ---
 
