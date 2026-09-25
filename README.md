@@ -74,6 +74,11 @@ Esse desenho garante que a pessoa fazendo a conferência físico nunca é interr
 
 ---
 
+![Relatório gerado pela aplicação](./public/screenshot1.png)
+Resultado do relatório exportado em .pdf:
+
+---
+
 ## Relatório Power BI - Em desenvolvimento.
 
 ![Relatório Power BI - Em desenvolvimento](./public/powerbirelatory.png)
