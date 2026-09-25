@@ -74,6 +74,12 @@ Esse desenho garante que a pessoa fazendo a conferência físico nunca é interr
 
 ---
 
+## Relatório Power BI - Em desenvolvimento.
+
+![Relatório Power BI - Em desenvolvimento](./public/powerbirelatory.png)
+
+---
+
 ## Autor
 
 Desenvolvido por Caio Carvalho — stack principal em React/TypeScript/Supabase.
