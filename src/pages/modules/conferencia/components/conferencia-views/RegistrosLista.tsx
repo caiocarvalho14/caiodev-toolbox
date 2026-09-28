@@ -93,8 +93,8 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
   }, [registrosDaConferencia, itensMap, marcas])
 
   // --- Ordenação ---
-  const [sortKey, setSortKey] = useState<SortKey>('item')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+  const [sortKey, setSortKey] = useState<SortKey>('codigo')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
