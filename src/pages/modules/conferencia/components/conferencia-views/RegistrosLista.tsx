@@ -401,9 +401,9 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
                     </td>
                     <td className="px-4 py-3">
                       <span
-                        className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg ${ok
-                          ? 'bg-emerald-100 text-emerald-700'
-                          : 'bg-amber-100 text-amber-700'
+                        className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg ${divergencia > 0
+                          ? 'bg-blue-100 text-blue-700'
+                          : (divergencia == 0 ? (r.qtd_sistema == 0 ? 'bg-gray-100 text-gray-700' : 'bg-emerald-100 text-emerald-700') :'bg-amber-100 text-amber-700')
                           }`}
                       >
                         {`${divergencia > 0 ? '+' : ''}${divergencia.toFixed(2)}`}

@@ -11,10 +11,12 @@ export function useOfflineList<T extends { id: string }>(
   table?: SyncableTable // opcional: se passado, faz pull antes de listar
 ) {
   const [data, setData] = useState<T[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(true)   // só true na carga inicial
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
 
   const reload = useCallback(async () => {
-    setLoading(true)
+
+    if (!hasLoadedOnce) setLoading(true)
     if (table && navigator.onLine) {
       try {
         await pullTable(table)
@@ -22,10 +24,12 @@ export function useOfflineList<T extends { id: string }>(
         // pull falhou (ex: sem internet real apesar do navigator.onLine) — segue com o que já tem local
       }
     }
+    console.log(`loading: ${loading}; hasLoadedOnce: ${hasLoadedOnce}`)
     const list = await repo.list()
     setData(list)
     setLoading(false)
-  }, [repo, table])
+    setHasLoadedOnce(true)
+  }, [repo, table, hasLoadedOnce])
 
   useEffect(() => {
     void reload()
