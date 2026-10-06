@@ -47,17 +47,15 @@ O primeiro módulo, **Conferência**, resolve o problema descrito acima:
 
 ### Por que offline-first
 
-A operação acontece no chão de fábrica, onde a conexão de internet não é garantida — câmaras frias e áreas de estoque nem sempre têm sinal estável. Um sistema que dependesse de conexão contínua **pararia a operação**, que é exatamente o problema que o papel resolvia (por pior que fosse).
+A operação pode acontecer em lugares onde a conexão de internet não é garantida — câmaras frias e áreas de estoque nem sempre têm sinal estável. Um sistema que dependesse de conexão contínua **pararia a operação**.
 
-A solução foi desenhar a aplicação como **offline-first de verdade**, não como um PWA com cache superficial:
+A solução foi desenhar a aplicação como **offline-first**:
 
-1. **Toda escrita é local primeiro.** Ao registrar uma contagem, o dado é salvo imediatamente no IndexedDB do dispositivo — a interface nunca espera resposta de rede para considerar a ação concluída.
+1. **Toda escrita é local primeiro.** Ao registrar uma contagem, o dado é salvo imediatamente no IndexedDB do dispositivo.
 2. **Fila de sincronização (padrão outbox).** Cada escrita local gera uma entrada numa fila de pendências. Enquanto não há conexão, os itens acumulam sem bloquear o uso do app.
 3. **Sincronização sob controle do usuário.** Um botão dedicado envia as pendências para o Supabase quando há conexão disponível, com feedback visual de quantos itens aguardam envio.
 4. **Detecção de conexão real**, não apenas o evento do navegador — o app testa se o servidor está de fato alcançável antes de tentar sincronizar, evitando falhas silenciosas em redes instáveis.
 5. **Tratamento de conflito e erro**, com retry automático e mensagens de erro quando uma sincronização falha.
-
-Esse desenho garante que a pessoa fazendo a conferência físico nunca é interrompida por falta de internet — o mesmo problema que o papel "resolvia", mas agora sem perder rastreabilidade, histórico ou precisão de cálculo.
 
 ---
 
