@@ -7,9 +7,11 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
+const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'
 const ROTA_CONFERENCIA = '/conferencia'
 const MAX_INPUT_CHARS = 24_000
+const MAX_OUTPUT_TOKENS = 1200
 
 // O prompt fica no servidor: o cliente só manda os dados e não consegue alterar as instruções.
 const SYSTEM_INSTRUCTION = `Você é um analista de dados de uma operação de estoque. Recebe conferências de estoque (contagem física vs. sistema) e deve analisá-las para apoiar a decisão de quanto bloquear por avaria/inventariar e onde investigar perdas.
@@ -44,9 +46,13 @@ async function usuarioTemAcessoRota(usuarioId: string, path: string): Promise<bo
   return (data ?? []).some((row: any) => row.rota?.path === path)
 }
 
-// Gemini 2.5 Flash gasta tokens de saída "pensando" por padrão; budget 0 desliga isso.
-function configThinking(model: string) {
-  return /gemini-2\.5-flash/.test(model) ? { thinkingConfig: { thinkingBudget: 0 } } : {}
+// Modelos open-source costumam ignorar o "sem markdown"; limpa o que sobrar
+// para o texto simples ficar correto na tela (que usa whitespace-pre-wrap).
+function limparMarkdown(texto: string) {
+  return texto
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/^#{1,6}\s*/gm, '')
+    .replace(/^\s*\*\s+/gm, '- ')
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -54,9 +60,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Método não permitido' })
   }
 
-  const apiKey = process.env.GEMINI_API_KEY
+  const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) {
-    return res.status(500).json({ error: 'GEMINI_API_KEY não configurada no servidor' })
+    return res.status(500).json({ error: 'GROQ_API_KEY não configurada no servidor' })
   }
 
   const token = req.headers.authorization?.replace('Bearer ', '')
@@ -84,59 +90,68 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const timeout = setTimeout(() => controller.abort(), 25_000)
 
   try {
-    const resposta = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
-          contents: [{ role: 'user', parts: [{ text: dados }] }],
-          generationConfig: {
-            temperature: 0.3,
-            maxOutputTokens: 2048,
-            ...configThinking(GEMINI_MODEL),
-          },
-        }),
-        signal: controller.signal,
-      }
-    )
+    const resposta = await fetch(GROQ_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        messages: [
+          { role: 'system', content: SYSTEM_INSTRUCTION },
+          { role: 'user', content: dados },
+        ],
+        temperature: 0.3,
+        max_completion_tokens: MAX_OUTPUT_TOKENS,
+      }),
+      signal: controller.signal,
+    })
 
     const json: any = await resposta.json().catch(() => ({}))
+    const msgGroq: string | undefined = json?.error?.message
 
     if (resposta.status === 429) {
+      const espera = resposta.headers.get('retry-after')
       return res.status(429).json({
-        error: 'Limite de uso da API do Gemini atingido. Aguarde um pouco e tente novamente.',
+        error:
+          `Limite de uso da API da Groq atingido (plano gratuito)` +
+          `${espera ? `. Tente novamente em ${espera}s` : '. Aguarde um pouco e tente novamente'}.` +
+          `${msgGroq ? ` Detalhe: ${msgGroq}` : ''}`,
+      })
+    }
+    if (resposta.status === 413) {
+      return res.status(413).json({
+        error: 'Dados acima do limite de tokens por minuto do modelo. Selecione menos conferências.',
       })
     }
     if (!resposta.ok) {
-      const msg = json?.error?.message || `status ${resposta.status}`
-      console.error('[gerar-analise] erro Gemini:', msg)
-      return res.status(502).json({ error: `Erro na API do Gemini: ${msg}` })
+      const msg = msgGroq || `status ${resposta.status}`
+      console.error('[gerar-analise] erro Groq:', msg)
+      return res.status(502).json({ error: `Erro na API da Groq: ${msg}` })
     }
 
-    const candidato = json?.candidates?.[0]
-    let texto: string = (candidato?.content?.parts ?? [])
-      .map((p: any) => p?.text)
-      .filter(Boolean)
-      .join('')
-      .trim()
+    const escolha = json?.choices?.[0]
+    let texto: string = (escolha?.message?.content ?? '').trim()
 
     if (!texto) {
-      const motivo = json?.promptFeedback?.blockReason || candidato?.finishReason || 'desconhecido'
-      return res.status(502).json({ error: `A IA não retornou texto (motivo: ${motivo}).` })
+      return res.status(502).json({
+        error: `A IA não retornou texto (motivo: ${escolha?.finish_reason || 'desconhecido'}).`,
+      })
     }
-    if (candidato?.finishReason === 'MAX_TOKENS') {
+
+    texto = limparMarkdown(texto)
+    if (escolha?.finish_reason === 'length') {
       texto += '\n\n(Resposta cortada pelo limite de tokens.)'
     }
 
-    return res.status(200).json({ analise: texto, uso: json?.usageMetadata })
+    return res.status(200).json({ analise: texto, uso: json?.usage })
   } catch (err) {
     const abortou = err instanceof Error && err.name === 'AbortError'
     return res.status(abortou ? 504 : 502).json({
       error: abortou
         ? 'A IA demorou demais para responder. Tente novamente.'
-        : 'Falha ao contatar a API do Gemini.',
+        : 'Falha ao contatar a API da Groq.',
     })
   } finally {
     clearTimeout(timeout)
