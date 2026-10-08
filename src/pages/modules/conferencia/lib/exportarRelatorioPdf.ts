@@ -31,7 +31,9 @@ export function exportarRelatorioPdf(relatorios: RelatorioConferencia[]) {
 
     const head = [['Código', 'Produto', 'Encontrado', 'Sistema', 'Divergência', ...rel.locaisUsados.map((l) => l.nome)]]
 
-    const body = rel.linhas.map((l) => [
+    const relOrdenado = rel.linhas.sort((a, b) => a.divergencia - b.divergencia)
+
+    const body = relOrdenado.map((l) => [
       l.codigo ?? '-',
       l.marcaNome ? `${l.marcaNome} - ${l.nome}` : l.nome,
       l.fisico.toFixed(2),
