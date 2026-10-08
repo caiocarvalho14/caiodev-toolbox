@@ -126,7 +126,8 @@ export default function RelatorioManager() {
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={gerarAnaliseIA}
-              disabled={relatorios.length === 0 || analisando}
+              // disabled={relatorios.length === 0 || analisando}
+              disabled
               title="Gera uma análise dos dados selecionados com IA"
               className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm font-medium hover:border-slate-300 hover:text-slate-900 transition-colors disabled:opacity-50"
             >
