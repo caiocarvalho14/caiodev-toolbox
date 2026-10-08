@@ -1,6 +1,6 @@
 // src/modules/conferencia/components/RelatorioManager.tsx
-import { useMemo, useState } from 'react'
-import { FileDown, FileSpreadsheet, BarChart3 } from 'lucide-react'
+import { useMemo, useState, useRef } from 'react'
+import { FileDown, FileSpreadsheet, BarChart3, Sparkles, Loader2 } from 'lucide-react'
 import { useOfflineList } from '../../../../hooks/useOfflineList'
 import { conferenciasRepository } from '../../../modules/conferencia/repositories/conferenciaRepository'
 import { registrosRepository } from '../../../modules/conferencia/repositories/registrosRespoitory'
@@ -12,6 +12,7 @@ import { montarRelatorio } from '../../../modules/conferencia/lib/relatorio'
 import { exportarRelatorioPdf } from '../../../modules/conferencia/lib/exportarRelatorioPdf'
 import { RelatorioTabela } from './relatorio-views/RelatorioTabela'
 import { RelatorioInsights } from './relatorio-views/RelatorioInsights'
+import { gerarAnalise } from '../lib/gerarAnalise'
 
 export default function RelatorioManager() {
   const { data: conferencias, loading } = useOfflineList(conferenciasRepository, "conf_conferencia")
@@ -22,6 +23,11 @@ export default function RelatorioManager() {
   const { data: locais } = useOfflineList(locaisRepository, "conf_local_contagem")
 
   const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set())
+
+  const [analise, setAnalise] = useState<string | null>(null)
+  const [analisando, setAnalisando] = useState(false)
+  const [erroAnalise, setErroAnalise] = useState<string | null>(null)
+  const analiseIdRef = useRef(0) // descarta respostas de requisições que ficaram velhas
 
   const conferenciasOrdenadas = useMemo(
     () => [...conferencias].sort((a, b) => (a.data < b.data ? 1 : -1)),
@@ -41,11 +47,35 @@ export default function RelatorioManager() {
       next.has(id) ? next.delete(id) : next.add(id)
       return next
     })
+    // a seleção mudou: a análise anterior não vale mais
+    analiseIdRef.current++
+    setAnalise(null)
+    setErroAnalise(null)
+    setAnalisando(false)
   }
 
   const exportarPdf = () => {
     if (relatorios.length === 0) return
     exportarRelatorioPdf(relatorios)
+  }
+
+  const gerarAnaliseIA = async () => {
+    if (relatorios.length === 0 || analisando) return
+
+    const id = ++analiseIdRef.current
+    setAnalisando(true)
+    setErroAnalise(null)
+
+    try {
+      const texto = await gerarAnalise(relatorios, { ignorarCache: analise !== null })
+      if (id !== analiseIdRef.current) return
+      setAnalise(texto)
+    } catch (err) {
+      if (id !== analiseIdRef.current) return
+      setErroAnalise(err instanceof Error ? err.message : 'Erro ao gerar análise.')
+    } finally {
+      if (id === analiseIdRef.current) setAnalisando(false)
+    }
   }
 
   return (
@@ -95,13 +125,19 @@ export default function RelatorioManager() {
           </div>
           <div className="flex gap-2 flex-wrap">
             <button
-              onClick={exportarPdf}
-              disabled={relatorios.length === 0}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors disabled:opacity-50"
+              onClick={gerarAnaliseIA}
+              disabled={relatorios.length === 0 || analisando}
+              title="Gera uma análise dos dados selecionados com IA"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm font-medium hover:border-slate-300 hover:text-slate-900 transition-colors disabled:opacity-50"
             >
-              <FileDown className="w-4 h-4" />
-              Exportar PDF
+              {analisando ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4" />
+              )}
+              {analisando ? 'Analisando...' : analise ? 'Gerar novamente' : 'Análise com IA'}
             </button>
+
             <button
               disabled
               title="Em breve — exportação em Excel de uma conferência por vez"
@@ -110,6 +146,16 @@ export default function RelatorioManager() {
               <FileSpreadsheet className="w-4 h-4" />
               Exportar Excel
             </button>
+
+            <button
+              onClick={exportarPdf}
+              disabled={relatorios.length === 0}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors disabled:opacity-50"
+            >
+              <FileDown className="w-4 h-4" />
+              Exportar PDF
+            </button>
+
           </div>
         </div>
 

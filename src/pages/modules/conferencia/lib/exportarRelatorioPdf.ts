@@ -7,7 +7,7 @@ export function exportarRelatorioPdf(relatorios: RelatorioConferencia[]) {
   const doc = new jsPDF({ orientation: 'landscape' })
   const margemInferior = 15
   const alturaPagina = doc.internal.pageSize.getHeight()
-
+  
   let cursorY = 15
 
   relatorios.forEach((rel) => {

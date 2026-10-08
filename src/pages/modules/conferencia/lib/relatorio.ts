@@ -16,6 +16,7 @@ export interface RelatorioLinha {
   fisico: number
   divergencia: number
   porLocal: Record<string, number> // localId -> soma das contagens naquele local
+  observacoes: string | null // <- novo
 }
 
 export interface RelatorioConferencia {
@@ -63,6 +64,7 @@ export function montarRelatorio(
         fisico,
         divergencia: fisico - r.qtd_sistema,
         porLocal,
+        observacoes: r.observacoes?.trim() || null, // <- novo
       }
     })
     .sort((a, b) => a.marcaNome.localeCompare(b.marcaNome, 'pt-BR'))
