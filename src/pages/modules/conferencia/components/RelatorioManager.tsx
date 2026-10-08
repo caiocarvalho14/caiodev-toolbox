@@ -23,6 +23,7 @@ export default function RelatorioManager() {
   const { data: locais } = useOfflineList(locaisRepository, "conf_local_contagem")
 
   const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set())
+  const [ordenacaoRelatorio, setOrdenacaoRelatorio ] = useState('codigo')
 
   const [analise, setAnalise] = useState<string | null>(null)
   const [analisando, setAnalisando] = useState(false)
@@ -56,7 +57,7 @@ export default function RelatorioManager() {
 
   const exportarPdf = () => {
     if (relatorios.length === 0) return
-    exportarRelatorioPdf(relatorios)
+    exportarRelatorioPdf(relatorios, ordenacaoRelatorio)
   }
 
   const gerarAnaliseIA = async () => {
@@ -138,16 +139,6 @@ export default function RelatorioManager() {
               )}
               {analisando ? 'Analisando...' : analise ? 'Gerar novamente' : 'Análise com IA'}
             </button>
-
-            <button
-              disabled
-              title="Em breve — exportação em Excel de uma conferência por vez"
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-400 text-sm font-medium cursor-not-allowed"
-            >
-              <FileSpreadsheet className="w-4 h-4" />
-              Exportar Excel
-            </button>
-
             <button
               onClick={exportarPdf}
               disabled={relatorios.length === 0}
@@ -156,6 +147,20 @@ export default function RelatorioManager() {
               <FileDown className="w-4 h-4" />
               Exportar PDF
             </button>
+            <div>
+              <label htmlFor="ordenacao_relatorio" className="block text-xs font-medium text-slate-500 mb-1">
+                Ordenar Por:
+              </label>
+              <select id="ordenacao_relatorio"
+                value={ordenacaoRelatorio}
+                onChange={(e) => setOrdenacaoRelatorio(e.target.value)}
+                className='px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300'
+              >
+                <option value="maior_falta">Falta</option>
+                <option value="menor_falta">Sobra</option>
+                <option value="codigo">Código</option>
+              </select>
+            </div>
 
           </div>
         </div>

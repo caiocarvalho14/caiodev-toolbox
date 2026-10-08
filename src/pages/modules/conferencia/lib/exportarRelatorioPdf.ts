@@ -3,11 +3,11 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import type { RelatorioConferencia } from './relatorio'
 
-export function exportarRelatorioPdf(relatorios: RelatorioConferencia[]) {
+export function exportarRelatorioPdf(relatorios: RelatorioConferencia[], ordenacao: String) {
   const doc = new jsPDF({ orientation: 'landscape' })
   const margemInferior = 15
   const alturaPagina = doc.internal.pageSize.getHeight()
-  
+
   let cursorY = 15
 
   relatorios.forEach((rel) => {
@@ -31,7 +31,12 @@ export function exportarRelatorioPdf(relatorios: RelatorioConferencia[]) {
 
     const head = [['Código', 'Produto', 'Encontrado', 'Sistema', 'Divergência', ...rel.locaisUsados.map((l) => l.nome)]]
 
-    const relOrdenado = rel.linhas.sort((a, b) => a.divergencia - b.divergencia)
+    const relOrdenado =
+      ordenacao == "maior_falta"
+        ? rel.linhas.sort((a, b) => a.divergencia - b.divergencia)
+        : ordenacao == "codigo"
+          ? rel.linhas.sort((a, b) => Number(b.codigo) - Number(a.codigo))
+          : rel.linhas.sort((a, b) => b.divergencia - a.divergencia);
 
     const body = relOrdenado.map((l) => [
       l.codigo ?? '-',
