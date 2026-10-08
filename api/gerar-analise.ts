@@ -10,8 +10,8 @@ const supabaseAdmin = createClient(
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
 const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'
 const ROTA_CONFERENCIA = '/conferencia'
-const MAX_INPUT_CHARS = 24_000
-const MAX_OUTPUT_TOKENS = 1200
+const MAX_INPUT_CHARS = process.env.MAX_INPUT_CHARS || 24_000
+const MAX_OUTPUT_TOKENS = process.env.MAX_OUTPUT_TOKENS || 1200
 
 // O prompt fica no servidor: o cliente só manda os dados e não consegue alterar as instruções.
 const SYSTEM_INSTRUCTION = `Você é um analista de dados de uma operação de estoque. Recebe conferências de estoque (contagem física vs. sistema) e deve analisá-las para apoiar a decisão de quanto bloquear por avaria/inventariar e onde investigar perdas.
