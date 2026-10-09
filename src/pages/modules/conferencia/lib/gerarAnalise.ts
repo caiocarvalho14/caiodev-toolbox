@@ -136,8 +136,9 @@ export async function gerarAnalise(
     data: { session },
   } = await supabase.auth.getSession()
   if (!session) throw new Error('Sessão expirada. Faça login novamente.')
+  const HOST = 'http://localhost:3000/api/'
 
-  const res = await fetch('/api/gerar-analise', {
+  const res = await fetch(`${HOST}gerar-analise`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

@@ -1,5 +1,5 @@
 // src/modules/conferencia/components/RelatorioManager.tsx
-import { useMemo, useState, useRef } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import { FileDown, FileSpreadsheet, BarChart3, Sparkles, Loader2 } from 'lucide-react'
 import { useOfflineList } from '../../../../hooks/useOfflineList'
 import { conferenciasRepository } from '../../../modules/conferencia/repositories/conferenciaRepository'
@@ -23,7 +23,7 @@ export default function RelatorioManager() {
   const { data: locais } = useOfflineList(locaisRepository, "conf_local_contagem")
 
   const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set())
-  const [ordenacaoRelatorio, setOrdenacaoRelatorio ] = useState('codigo')
+  const [ordenacaoRelatorio, setOrdenacaoRelatorio] = useState('codigo')
 
   const [analise, setAnalise] = useState<string | null>(null)
   const [analisando, setAnalisando] = useState(false)
@@ -55,10 +55,35 @@ export default function RelatorioManager() {
     setAnalisando(false)
   }
 
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null)
+
   const exportarPdf = () => {
     if (relatorios.length === 0) return
-    exportarRelatorioPdf(relatorios, ordenacaoRelatorio)
+
+    exportarRelatorioPdf(relatorios, ordenacaoRelatorio, 'baixar')
   }
+
+  useEffect(() => {
+    if (relatorios.length === 0) {
+      setPdfUrl(null)
+      return
+    }
+
+    const blob = exportarRelatorioPdf(
+      relatorios,
+      ordenacaoRelatorio,
+      'ver'
+    )
+
+    if (!(blob instanceof Blob)) return
+
+    const url = URL.createObjectURL(blob)
+    setPdfUrl(url)
+
+    return () => {
+      URL.revokeObjectURL(url)
+    }
+  }, [relatorios, ordenacaoRelatorio])
 
   const gerarAnaliseIA = async () => {
     if (relatorios.length === 0 || analisando) return
@@ -97,7 +122,7 @@ export default function RelatorioManager() {
                 <input
                   type="checkbox"
                   checked={selecionadas.has(c.id)}
-                  onChange={() => toggle(c.id)}
+                  onChange={() => { toggle(c.id); }}
                   className="rounded border-slate-300 shrink-0"
                 />
                 <span className="min-w-0">
@@ -145,7 +170,7 @@ export default function RelatorioManager() {
               className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors disabled:opacity-50"
             >
               <FileDown className="w-4 h-4" />
-              Exportar PDF
+              Baixar PDF
             </button>
             <div>
               <label htmlFor="ordenacao_relatorio" className="block text-xs font-medium text-slate-500 mb-1">
@@ -172,10 +197,13 @@ export default function RelatorioManager() {
           </div>
         ) : (
           <>
-            <RelatorioInsights relatorios={relatorios} />
-            {relatorios.map((r) => (
-              <RelatorioTabela key={r.conferencia.id} relatorio={r} />
-            ))}
+            {pdfUrl && (
+              <iframe
+                src={pdfUrl}
+                title="Prévia do relatório"
+                className="w-full h-[600px] border rounded"
+              />
+            )}
           </>
         )}
       </div>

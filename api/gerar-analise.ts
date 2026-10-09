@@ -82,7 +82,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (typeof dados !== 'string' || !dados.trim()) {
     return res.status(400).json({ error: 'Dados da análise ausentes' })
   }
-  if (dados.length > MAX_INPUT_CHARS) {
+  if (dados.length ) {
     return res.status(413).json({ error: 'Dados muito extensos para análise' })
   }
 

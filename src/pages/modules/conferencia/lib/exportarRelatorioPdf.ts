@@ -3,14 +3,14 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import type { RelatorioConferencia } from './relatorio'
 
-export function exportarRelatorioPdf(relatorios: RelatorioConferencia[], ordenacao: String) {
+export function exportarRelatorioPdf(relatorios: RelatorioConferencia[], ordenacao: String, acao: String) {
   const doc = new jsPDF({ orientation: 'landscape' })
   const margemInferior = 15
   const alturaPagina = doc.internal.pageSize.getHeight()
 
   let cursorY = 15
 
-  relatorios.forEach((rel) => {
+  relatorios.sort((a,b ) => (b.conferencia.data.localeCompare(a.conferencia.data))).forEach((rel) => {
     const titulo = rel.conferencia.nome
       ? `${rel.conferencia.nome} — ${new Date(rel.conferencia.data + 'T00:00:00').toLocaleDateString('pt-BR')}`
       : new Date(rel.conferencia.data + 'T00:00:00').toLocaleDateString('pt-BR')
@@ -89,5 +89,10 @@ export function exportarRelatorioPdf(relatorios: RelatorioConferencia[], ordenac
       ? `${relatorios[0].conferencia.nome} - ${relatorios[0].conferencia.data}.pdf`
       : `relatorio-conferencias-${new Date().toISOString().slice(0, 10)}.pdf`
 
-  doc.save(nomeArquivo)
+  if (acao === 'baixar') {
+    doc.save(nomeArquivo)
+    return
+  }
+
+  return doc.output('blob')
 }
