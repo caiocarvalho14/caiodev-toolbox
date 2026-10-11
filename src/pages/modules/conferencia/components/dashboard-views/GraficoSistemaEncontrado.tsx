@@ -65,16 +65,16 @@ export function GraficoSistemaEncontrado({ opcoes, selecionadaId, onSelecionar, 
   const comDivergencia = linhasVisiveis.filter((l) => Math.abs(l.divergencia) >= EPS).length
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-5 min-w-0">
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4">
-        <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-slate-900">Sistema × Encontrado</h3>
-          {linhasVisiveis.length > 0 && (
-            <p className="text-xs text-slate-500 mt-0.5">
-              {linhasVisiveis.length} {linhasVisiveis.length === 1 ? 'item' : 'itens'} · {comDivergencia} com divergência
-            </p>
-          )}
-        </div>
+<div className="flex flex-col h-[32rem] min-h-[16rem] resize-y overflow-hidden bg-white rounded-2xl border border-slate-200 p-5 min-w-0">
+  <div className="shrink-0 flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4">
+    <div className="min-w-0">
+      <h3 className="text-sm font-semibold text-slate-900">Sistema × Encontrado</h3>
+      {linhasVisiveis.length > 0 && (
+        <p className="text-xs text-slate-500 mt-0.5">
+          {linhasVisiveis.length} {linhasVisiveis.length === 1 ? 'item' : 'itens'} · {comDivergencia} com divergência
+        </p>
+      )}
+    </div>
 
         <div className="flex flex-wrap items-center gap-2">
           {opcoes.length > 0 && (
@@ -147,7 +147,7 @@ export function GraficoSistemaEncontrado({ opcoes, selecionadaId, onSelecionar, 
             </span>
           </div>
 
-          <div className="space-y-3 max-h-[560px] overflow-y-auto pr-2">
+          <div className="space-y-3  overflow-y-auto pr-2 ">
             {linhasVisiveis.map((l) => {
               const falta = l.divergencia < -EPS
               const sobra = l.divergencia > EPS

@@ -11,8 +11,10 @@ import { locaisRepository } from '../../../modules/conferencia/repositories/loca
 import { CalendarioConferencias } from './dashboard-views/CalendarioConferencias'
 import { GraficoSistemaEncontrado, type LinhaGrafico } from './dashboard-views/GraficoSistemaEncontrado'
 import { GraficoPizzaLocais, type EstoqueLocal } from './dashboard-views/GraficoPizzaLocais'
+import { formatarDataHora } from '../../../../lib/functions'
 
 const formatarData = (iso: string) => iso.split('-').reverse().join('/')
+
 
 function KpiCard({
   icon: Icon,
@@ -137,7 +139,7 @@ export default function DashboardManager() {
     () =>
       conferenciasOrdenadas.map((c) => ({
         id: c.id,
-        rotulo: `${formatarData(c.data)}${c.nome ? ` — ${c.nome}` : ''}`,
+        rotulo: `${formatarDataHora(c.created_at)}${c.nome ? ` — ${c.nome}` : ''}`,
         data: c.data
       })),
     [conferenciasOrdenadas]

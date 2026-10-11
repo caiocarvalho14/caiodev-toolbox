@@ -2,6 +2,7 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import type { RelatorioConferencia } from './relatorio'
+import { formatarDataHora } from '../../../../lib/functions'
 
 export function exportarRelatorioPdf(relatorios: RelatorioConferencia[], ordenacao: String, acao: String) {
   const doc = new jsPDF({ orientation: 'landscape' })
@@ -12,7 +13,7 @@ export function exportarRelatorioPdf(relatorios: RelatorioConferencia[], ordenac
 
   relatorios.sort((a,b ) => (b.conferencia.data.localeCompare(a.conferencia.data))).forEach((rel) => {
     const titulo = rel.conferencia.nome
-      ? `${rel.conferencia.nome} — ${new Date(rel.conferencia.data + 'T00:00:00').toLocaleDateString('pt-BR')}`
+      ? `${rel.conferencia.nome} — ${formatarDataHora(rel.conferencia.created_at)}`
       : new Date(rel.conferencia.data + 'T00:00:00').toLocaleDateString('pt-BR')
     const observacao = rel.conferencia.observacao ? `Observação: ${rel.conferencia.observacao}` : ``
 
@@ -40,7 +41,7 @@ export function exportarRelatorioPdf(relatorios: RelatorioConferencia[], ordenac
 
     const body = relOrdenado.map((l) => [
       l.codigo ?? '-',
-      l.marcaNome ? `${l.marcaNome} - ${l.nome}` : l.nome,
+      l.marcaNome ? `${l.marcaNome} - ${l.nome} ${l.observacoes != null ? `- (${l.observacoes})` : ''}` : `${l.nome} `,
       l.fisico.toFixed(2),
       l.sistema.toFixed(2),
       `${l.divergencia > 0 ? '+' : ''}${l.divergencia.toFixed(2)}`,
@@ -75,6 +76,9 @@ export function exportarRelatorioPdf(relatorios: RelatorioConferencia[], ordenac
               data.cell.styles.textColor = [4, 120, 87]
             }
           }
+        }
+        if(data.column.index === 1 && data.section === 'body'){
+          
         }
       },
     })

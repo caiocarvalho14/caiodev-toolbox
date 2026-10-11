@@ -10,8 +10,7 @@ import { marcasRepository } from '../../../modules/conferencia/repositories/marc
 import { locaisRepository } from '../../../modules/conferencia/repositories/locaisRepository'
 import { montarRelatorio } from '../../../modules/conferencia/lib/relatorio'
 import { exportarRelatorioPdf } from '../../../modules/conferencia/lib/exportarRelatorioPdf'
-import { RelatorioTabela } from './relatorio-views/RelatorioTabela'
-import { RelatorioInsights } from './relatorio-views/RelatorioInsights'
+import { formatarDataHora } from '../../../../lib/functions'
 import { gerarAnalise } from '../lib/gerarAnalise'
 
 export default function RelatorioManager() {
@@ -130,7 +129,7 @@ export default function RelatorioManager() {
                     {c.nome || new Date(c.data + 'T00:00:00').toLocaleDateString('pt-BR')}
                   </span>
                   <span className="block text-xs text-slate-400">
-                    {new Date(c.data + 'T00:00:00').toLocaleDateString('pt-BR')}
+                    {formatarDataHora(c.created_at)}
                   </span>
                 </span>
               </label>

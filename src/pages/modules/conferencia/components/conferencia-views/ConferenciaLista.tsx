@@ -63,6 +63,7 @@ export default function ConferenciasLista({ onSelect }: Props) {
   }
 
   const save = async (e: React.FormEvent) => {
+    const currentConferencia = conferencias.find((c) => c.id === editing?.id);
     e.preventDefault()
     if (!form.data) {
       toast({ variant: 'destructive', title: 'Data é obrigatória' })
@@ -74,7 +75,8 @@ export default function ConferenciasLista({ onSelect }: Props) {
         id: editing?.id,
         nome: form.nome,
         data: form.data,
-        observacao: form.observacao
+        observacao: form.observacao,
+        created_at: String(currentConferencia?.created_at)
       })
 
       // só na criação (não na edição) aplica o modelo selecionado
@@ -200,7 +202,7 @@ export default function ConferenciasLista({ onSelect }: Props) {
           </p>
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 " >
           {filtered.map((c) => (
             <button
               key={c.id}
@@ -210,7 +212,13 @@ export default function ConferenciasLista({ onSelect }: Props) {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   {c.nome && <h3 className="font-semibold text-slate-900">{c.nome}</h3>}
-                  {new Date(c.data + 'T00:00:00').toLocaleDateString('pt-BR')}
+                  {new Date(c.created_at).toLocaleString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
                   {c.observacao && (
                     <p className="text-xs text-slate-400 truncate mt-1">{c.observacao}</p>
                   )}
@@ -241,7 +249,7 @@ export default function ConferenciasLista({ onSelect }: Props) {
 
       <Modal open={open} onClose={() => setOpen(false)} title={editing ? 'Editar conferência' : 'Nova conferência'}>
         <form onSubmit={save} className="space-y-4">
-          <div>
+          <div className='hidden'>
             <label htmlFor="data" className="block text-sm font-medium text-slate-700 mb-1.5">
               Data *
             </label>
