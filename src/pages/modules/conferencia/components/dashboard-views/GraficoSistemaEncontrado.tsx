@@ -66,60 +66,58 @@ export function GraficoSistemaEncontrado({ opcoes, selecionadaId, onSelecionar, 
   const divergenciaFalta = linhasVisiveis.filter((l) => l.divergencia < 0).length
 
   return (
-<div className="flex flex-col h-[32rem] min-h-[16rem] resize-y overflow-hidden bg-white rounded-2xl border border-slate-200 p-5 min-w-0">
-  <div className="shrink-0 flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4">
-    <div className="min-w-0">
-      <h3 className="text-sm font-semibold text-slate-900">Sistema × Encontrado</h3>
-      {linhasVisiveis.length > 0 && (
-        <p className="text-xs text-slate-500 mt-0.5">
-          {linhasVisiveis.length} {linhasVisiveis.length === 1 ? 'item' : 'itens'} · {divergenciaFalta} com falta · {divergenciaSobra} com sobra
-        </p>
-      )}
-    </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {opcoes.length > 0 && (
-            <select
-              value={selecionadaId ?? ''}
-              onChange={(e) => onSelecionar(e.target.value)}
-              aria-label="Conferência"
-              className="max-w-full px-3 py-2 rounded-xl border border-slate-200 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
-            >
-              {opcoes.filter((d) => d.data == dataConferenciaSelecionada).map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.rotulo}
-                </option>
-              ))}
-            </select>
+    <div className="flex flex-col mb-4 h-[32rem] min-h-[16rem] resize-y overflow-hidden bg-white rounded-2xl border border-slate-200 p-5 min-w-0">
+      <div className="shrink-0 flex flex-col sm:flex-row sm:items-start justify-between gap-3 ">
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold text-slate-900">Sistema × Encontrado</h3>
+          {linhasVisiveis.length > 0 && (
+            <p className="text-xs text-slate-500 mt-0.5">
+              {linhasVisiveis.length} {linhasVisiveis.length === 1 ? 'item' : 'itens'} · {divergenciaFalta} com falta · {divergenciaSobra} com sobra
+            </p>
           )}
-
-          {unidadesDisponiveis.length > 1 && (
-            <div className="inline-flex rounded-xl border border-slate-200 overflow-hidden">
-              {unidadesDisponiveis.map((u) => (
-                <button
-                  key={u}
-                  type="button"
-                  onClick={() => setUnidade(u)}
-                  className={`px-3 py-2 text-sm font-medium transition-colors ${
-                    u === unidadeAtiva ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  {u}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <select
-            value={ordenacao}
-            onChange={(e) => setOrdenacao(e.target.value as Ordenacao)}
-            aria-label="Ordenar por"
-            className="px-3 py-2 rounded-xl border border-slate-200 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
-          >
-            <option value="divergencia">Falta</option>
-            <option value="nome">Nome (A-Z)</option>
-          </select>
         </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-2 my-4">
+        {opcoes.length > 0 && (
+          <select
+            value={selecionadaId ?? ''}
+            onChange={(e) => onSelecionar(e.target.value)}
+            aria-label="Conferência"
+            className="max-w-full px-3  py-2 rounded-xl border border-slate-200 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
+          >
+            {opcoes.filter((d) => d.data == dataConferenciaSelecionada).map((o) => (
+              <option key={o.id} value={o.id} className=''>
+                {o.rotulo}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {unidadesDisponiveis.length > 1 && (
+          <div className="inline-flex rounded-xl border border-slate-200 overflow-hidden">
+            {unidadesDisponiveis.map((u) => (
+              <button
+                key={u}
+                type="button"
+                onClick={() => setUnidade(u)}
+                className={`px-3 py-2 text-sm font-medium transition-colors ${u === unidadeAtiva ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
+                  }`}
+              >
+                {u}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <select
+          value={ordenacao}
+          onChange={(e) => setOrdenacao(e.target.value as Ordenacao)}
+          aria-label="Ordenar por"
+          className="px-3 py-2 rounded-xl border border-slate-200 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
+        >
+          <option value="divergencia">Falta</option>
+          <option value="nome">Nome (A-Z)</option>
+        </select>
       </div>
 
       {linhasVisiveis.length === 0 ? (
@@ -163,9 +161,8 @@ export function GraficoSistemaEncontrado({ opcoes, selecionadaId, onSelecionar, 
                       {l.nome}
                     </p>
                     <p
-                      className={`text-[11px] font-medium ${
-                        falta ? 'text-red-600' : sobra ? 'text-emerald-600' : 'text-slate-400'
-                      }`}
+                      className={`text-[11px] font-medium ${falta ? 'text-red-600' : sobra ? 'text-emerald-600' : 'text-slate-400'
+                        }`}
                     >
                       {falta || sobra ? `${sobra ? '+' : ''}${fmt(l.divergencia)} ${l.unidade}` : 'ok'}
                     </p>
