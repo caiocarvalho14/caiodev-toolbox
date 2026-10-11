@@ -1,5 +1,5 @@
 // src/modules/conferencia/components/conferencia-views/ContagensDetalhe.tsx
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Minus, Plus, Trash2, Scale, Save } from 'lucide-react'
 import { useToast } from '../../../../../hooks/useToast'
 import { Modal } from '../../../../../components/ui/Modal'
@@ -11,6 +11,8 @@ import { marcasRepository } from '../../../../modules/conferencia/repositories/m
 import { locaisRepository } from '../../../../modules/conferencia/repositories/locaisRepository'
 import type { RegistroConferencia } from '../../../../modules/conferencia/types/registro'
 
+import { useBlocker } from 'react-router'
+
 interface Props {
   registro: RegistroConferencia
 }
@@ -21,6 +23,28 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
   const { data: itens } = useOfflineList(itensRepository, "conf_item")
   const { data: marcas } = useOfflineList(marcasRepository, "conf_marca_item")
   const { data: locais } = useOfflineList(locaisRepository, "conf_local_contagem")
+
+  // ESTADO PRA VERIFICAR SE O STICKY DO HEADER
+  const [isSticky, setIsSticky] = useState(false)
+  const sentinelRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsSticky(!entry.isIntersecting)
+      },
+      { threshold: 0 }
+    )
+
+    if (sentinelRef.current) {
+      observer.observe(sentinelRef.current)
+    }
+
+    return () => observer.disconnect()
+  }, [])
+
+  // INTERCEPTAR AÇÃO DE VOLTAR
+  
 
   // tipo de uma contagem, derivado da própria lista (evita depender do nome do arquivo de tipos)
   type ContagemEditavel = (typeof todasContagens)[number]
@@ -197,17 +221,39 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
   return (
     <div className="space-y-6">
       {/* Cabeçalho do item */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6">
-        <h2 className="text-xl font-semibold text-slate-900">{marca?.nome} - {item?.nome ?? 'Item removido'} - {item?.codigo}</h2>
+      <div ref={sentinelRef} className="h-px" />
+
+      <div
+        className={`
+              bg-white border border-slate-200 
+              transition-all duration-200 
+              ${isSticky
+            ? 'fixed top-0 left-0 right-0 z-50 rounded-none px-4 py-2'
+            : 'sticky top-20 rounded-2xl p-6'
+          }
+            `}
+      >
+        <h2 className="text-xl font-semibold text-slate-900">
+          {item?.codigo} - {marca?.nome} - {item?.nome ?? 'Item removido'}
+        </h2>
+
         {(marca || item) && (
           <p className="text-sm text-slate-500 mt-0.5">
-            {marca && usaTara && taraPadrao > 0 ? ` · tara padrão ${taraPadrao} kg` : ''}
+            {marca && usaTara && taraPadrao > 0
+              ? ` · tara padrão ${taraPadrao} kg`
+              : ''}
             {marca ? ' · ' : ''}
             {tipoContagem}
           </p>
         )}
+      </div>
 
-        <div className="grid sm:grid-cols-3 gap-4 mt-5">
+      <div className="bg-white rounded-2xl border border-slate-200 p-6">
+
+
+
+
+        <div className="grid sm:grid-cols-3 gap-4 ">
           <div>
             <label htmlFor="qtd_sistema" className="block text-xs font-medium text-slate-500 mb-1">
               Sistema
@@ -232,8 +278,8 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
             <label className="block text-xs font-medium text-slate-500 mb-1">Divergência</label>
             <div
               className={`px-3 py-2 rounded-lg text-sm font-medium ${Math.abs(divergencia) < 0.001
-                  ? 'bg-emerald-50 text-emerald-700'
-                  : 'bg-amber-50 text-amber-700'
+                ? 'bg-emerald-50 text-emerald-700'
+                : 'bg-amber-50 text-amber-700'
                 }`}
             >
               {divergencia > 0 ? '+' : ''}

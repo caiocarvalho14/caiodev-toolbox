@@ -8,6 +8,9 @@ import ItemManager from './conferencia/components/ItemManager'
 import ConferenciaManager from './conferencia/components/ConferenciaManager'
 import RelatorioManager from './conferencia/components/RelatorioManager'
 
+import { formatarDataAtual } from '../../lib/functions'
+import { formatarDataHora } from '../../lib/functions'
+
 
 const tabs: TabItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: ChartLine, component: DashboardConf},
@@ -19,10 +22,11 @@ const tabs: TabItem[] = [
 ]
 
 export default function ConferenciaPage() {
+  const agora = formatarDataHora(formatarDataAtual())
   return (
     <PageLayout
       title="Conferência"
-      description="Controle de contagem e divergência de estoque"
+      description={`Dados atualizados em ${agora}`}
       icon={ClipboardList}
       gradient="from-rose-500 to-red-600"
       activeTabClassName="border-rose-500 text-rose-600"
