@@ -52,7 +52,7 @@ export function GraficoSistemaEncontrado({ opcoes, selecionadaId, onSelecionar, 
     filtradas.sort((a, b) =>
       ordenacao === 'nome'
         ? a.nome.localeCompare(b.nome, 'pt-BR')
-        : Math.abs(b.divergencia) - Math.abs(a.divergencia) || a.nome.localeCompare(b.nome, 'pt-BR')
+        : (a.divergencia) - (b.divergencia) || a.nome.localeCompare(b.nome, 'pt-BR')
     )
     return filtradas
   }, [linhas, unidadeAtiva, ordenacao])
@@ -62,7 +62,8 @@ export function GraficoSistemaEncontrado({ opcoes, selecionadaId, onSelecionar, 
     [linhasVisiveis]
   )
 
-  const comDivergencia = linhasVisiveis.filter((l) => Math.abs(l.divergencia) >= EPS).length
+  const divergenciaSobra = linhasVisiveis.filter((l) => l.divergencia > 0).length
+  const divergenciaFalta = linhasVisiveis.filter((l) => l.divergencia < 0).length
 
   return (
 <div className="flex flex-col h-[32rem] min-h-[16rem] resize-y overflow-hidden bg-white rounded-2xl border border-slate-200 p-5 min-w-0">
@@ -71,7 +72,7 @@ export function GraficoSistemaEncontrado({ opcoes, selecionadaId, onSelecionar, 
       <h3 className="text-sm font-semibold text-slate-900">Sistema × Encontrado</h3>
       {linhasVisiveis.length > 0 && (
         <p className="text-xs text-slate-500 mt-0.5">
-          {linhasVisiveis.length} {linhasVisiveis.length === 1 ? 'item' : 'itens'} · {comDivergencia} com divergência
+          {linhasVisiveis.length} {linhasVisiveis.length === 1 ? 'item' : 'itens'} · {divergenciaFalta} com falta · {divergenciaSobra} com sobra
         </p>
       )}
     </div>
@@ -115,7 +116,7 @@ export function GraficoSistemaEncontrado({ opcoes, selecionadaId, onSelecionar, 
             aria-label="Ordenar por"
             className="px-3 py-2 rounded-xl border border-slate-200 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
           >
-            <option value="divergencia">Maior divergência</option>
+            <option value="divergencia">Falta</option>
             <option value="nome">Nome (A-Z)</option>
           </select>
         </div>

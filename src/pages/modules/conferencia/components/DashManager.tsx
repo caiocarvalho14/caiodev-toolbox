@@ -76,9 +76,9 @@ export default function DashboardManager() {
   const hoje = new Date()
   const mesBase = conferenciaSelecionada
     ? {
-        ano: Number(conferenciaSelecionada.data.slice(0, 4)),
-        mes: Number(conferenciaSelecionada.data.slice(5, 7)) - 1,
-      }
+      ano: Number(conferenciaSelecionada.data.slice(0, 4)),
+      mes: Number(conferenciaSelecionada.data.slice(5, 7)) - 1,
+    }
     : { ano: hoje.getFullYear(), mes: hoje.getMonth() }
   const mesVisivel = mesManual ?? mesBase // o calendário acompanha a conferência até o usuário navegar
 
@@ -209,7 +209,13 @@ export default function DashboardManager() {
             onMudarMes={mudarMes}
             onSelecionarDia={selecionarDia}
           />
-          <GraficoPizzaLocais dados={estoquePorLocal} />
+          <GraficoPizzaLocais
+            dados={estoquePorLocal}
+            opcoes={opcoesConferencia} // mesmas opcoes do GraficoSistemaEncontrado
+
+            selecionadaId={conferenciaSelecionada?.id ?? null}
+
+          />
         </div>
 
         <GraficoSistemaEncontrado
@@ -218,6 +224,7 @@ export default function DashboardManager() {
           dataConferenciaSelecionada={conferenciaSelecionada?.data ?? null}
           onSelecionar={selecionarConferencia}
           linhas={linhasGrafico}
+
         />
       </div>
     </div>

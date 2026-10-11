@@ -10,6 +10,7 @@ import { modelosRepository } from '../../../../modules/conferencia/repositories/
 import { modeloItensRepository } from '../../../../modules/conferencia/repositories/modeloItemRepository'
 import { registrosRepository } from '../../../../modules/conferencia/repositories/registrosRespoitory'
 import type { Conferencia } from '../../../../modules/conferencia/types/Conferencia'
+import { formatarDataAtual } from '../../../../../lib/functions'
 
 const empty = { nome: '', data: new Date().toISOString().slice(0, 10), observacao: '', modelo: '' }
 
@@ -76,7 +77,7 @@ export default function ConferenciasLista({ onSelect }: Props) {
         nome: form.nome,
         data: form.data,
         observacao: form.observacao,
-        created_at: String(currentConferencia?.created_at)
+        created_at: currentConferencia != undefined ? String(currentConferencia?.created_at) : formatarDataAtual()
       })
 
       // só na criação (não na edição) aplica o modelo selecionado
@@ -89,6 +90,7 @@ export default function ConferenciasLista({ onSelect }: Props) {
             observacoes: null,
             data: form.data,
             conferencia: conferenciaSalva.id,
+            
           })
         }
       }
@@ -212,13 +214,13 @@ export default function ConferenciasLista({ onSelect }: Props) {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   {c.nome && <h3 className="font-semibold text-slate-900">{c.nome}</h3>}
-                  {new Date(c.created_at).toLocaleString('pt-BR', {
+                  {c.created_at != 'undefined' ? new Date(c.created_at).toLocaleString('pt-BR', {
                     day: '2-digit',
                     month: '2-digit',
                     year: 'numeric',
                     hour: '2-digit',
                     minute: '2-digit',
-                  })}
+                  }) : '(Sincronize para atualizar a data.)'}
                   {c.observacao && (
                     <p className="text-xs text-slate-400 truncate mt-1">{c.observacao}</p>
                   )}

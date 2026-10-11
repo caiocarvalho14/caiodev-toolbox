@@ -11,6 +11,8 @@ export interface EstoqueLocal {
 
 interface Props {
   dados: EstoqueLocal[]
+  opcoes: { id: string; rotulo: string; data: string }[]
+  selecionadaId: string
 }
 
 const MAX_FATIAS = 10
@@ -30,8 +32,9 @@ const COR_OUTROS = { fatia: 'stroke-slate-300', ponto: 'bg-slate-300' }
 const fmt = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 2 })
 const fmtPct = (n: number) => `${n.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`
 
-export function GraficoPizzaLocais({ dados }: Props) {
+export function GraficoPizzaLocais({ dados, selecionadaId, opcoes }: Props) {
   const [unidade, setUnidade] = useState<'KG' | 'UND'>('KG')
+  const [filtroLocal, setFiltroLocal] = useState('geral')
 
   // KG e UND não se misturam: o seletor só aparece se existirem os dois
   const unidadesDisponiveis = useMemo(
@@ -41,6 +44,7 @@ export function GraficoPizzaLocais({ dados }: Props) {
   const unidadeAtiva = unidadesDisponiveis.includes(unidade) ? unidade : unidadesDisponiveis[0]
 
   const { fatias, total } = useMemo(() => {
+    console.log(dados)
     const ordenados = dados
       .filter((d) => d.unidade === unidadeAtiva && d.valor > 0)
       .sort((a, b) => b.valor - a.valor)
@@ -82,6 +86,11 @@ export function GraficoPizzaLocais({ dados }: Props) {
           <h3 className="text-sm font-semibold text-slate-900">Estoque por local</h3>
           <p className="text-xs text-slate-500 mt-0.5">Todas as conferências</p>
         </div>
+        <select value={filtroLocal} onChange={(e) => { setFiltroLocal(e.target.value) }} className='max-w-full px-3 py-2 rounded-xl border border-slate-200 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300'>
+          <option value="geral">Geral</option>
+          <option disabled value="selecionada">Selecionada</option>
+          {/* FALTA FILTRAR O GRAFICO PELA CONFERENCIA SELECIONADA NO GRAFICO DE SISTEMA x ENCONTRADO */}
+        </select>
 
         {unidadesDisponiveis.length > 1 && (
           <div className="inline-flex rounded-xl border border-slate-200 overflow-hidden shrink-0">
@@ -90,9 +99,8 @@ export function GraficoPizzaLocais({ dados }: Props) {
                 key={u}
                 type="button"
                 onClick={() => setUnidade(u)}
-                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                  u === unidadeAtiva ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
-                }`}
+                className={`px-3 py-1.5 text-xs font-medium transition-colors ${u === unidadeAtiva ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
+                  }`}
               >
                 {u}
               </button>
