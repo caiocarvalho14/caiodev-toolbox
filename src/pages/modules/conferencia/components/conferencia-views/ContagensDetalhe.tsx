@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { Minus, Plus, Trash2, Scale, Save } from 'lucide-react'
 import { useToast } from '../../../../../hooks/useToast'
+import { Modal } from '../../../../../components/ui/Modal'
 import { useOfflineList } from '../../../../../hooks/useOfflineList'
 import { registrosRepository } from '../../../../modules/conferencia/repositories/registrosRespoitory'
 import { contagensRepository } from '../../../../modules/conferencia/repositories/contagensRepository'
@@ -20,6 +21,9 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
   const { data: itens } = useOfflineList(itensRepository, "conf_item")
   const { data: marcas } = useOfflineList(marcasRepository, "conf_marca_item")
   const { data: locais } = useOfflineList(locaisRepository, "conf_local_contagem")
+
+  // tipo de uma contagem, derivado da própria lista (evita depender do nome do arquivo de tipos)
+  type ContagemEditavel = (typeof todasContagens)[number]
 
   const registro = registros.find((r) => r.id === registroProp.id) ?? registroProp
   const contagens = todasContagens.filter((c) => c.registro === registro.id)
@@ -54,6 +58,12 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
   const [observacoes, setObservacoes] = useState(registro.observacoes || '')
   const [qtdSistema, setQtdSistema] = useState(String(registro.qtd_sistema))
   const [salvandoInfo, setSalvandoInfo] = useState(false)
+
+  // Edição de uma pesagem já registrada (abre ao clicar no badge)
+  const [editando, setEditando] = useState<ContagemEditavel | null>(null)
+  const [valorEditado, setValorEditado] = useState('')
+  const [localEditado, setLocalEditado] = useState('')
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false)
 
   const { toast } = useToast()
 
@@ -104,6 +114,60 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
   const removerContagem = async (id: string) => {
     await contagensRepository.remove(id)
     await reloadContagens()
+  }
+
+  const abrirEdicao = (c: ContagemEditavel) => {
+    setEditando(c)
+    setValorEditado(String(c.contagem))
+    // se o local foi removido, obriga a escolher outro em vez de manter um id inexistente
+    setLocalEditado(locais.some((l) => l.id === c.local) ? c.local : '')
+  }
+
+  const fecharEdicao = () => setEditando(null)
+
+  const salvarEdicao = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editando) return
+
+    const valor = Number(valorEditado)
+
+    if (!localEditado) {
+      toast({ variant: 'destructive', title: 'Selecione um local' })
+      return
+    }
+    if (!valorEditado.trim() || Number.isNaN(valor) || valor <= 0) {
+      toast({ variant: 'destructive', title: 'Informe uma quantidade válida' })
+      return
+    }
+
+    const valorFinal = Math.round(valor * 100) / 100
+
+    // nada mudou: só fecha, sem gerar item na fila de sincronização
+    if (valorFinal === editando.contagem && localEditado === editando.local) {
+      fecharEdicao()
+      return
+    }
+
+    try {
+      setSalvandoEdicao(true)
+      await contagensRepository.save({
+        id: editando.id,
+        registro: editando.registro,
+        local: localEditado,
+        contagem: valorFinal,
+      })
+      toast({ title: usaTara ? 'Pesagem atualizada' : 'Contagem atualizada' })
+      fecharEdicao()
+      await reloadContagens()
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao atualizar',
+        description: err instanceof Error ? err.message : undefined,
+      })
+    } finally {
+      setSalvandoEdicao(false)
+    }
   }
 
   const salvarInfo = async () => {
@@ -354,12 +418,19 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
             {contagens.map((c) => (
               <span
                 key={c.id}
-                className="group inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1.5 rounded-full bg-slate-100 text-sm text-slate-700"
+                className="group inline-flex items-center gap-0.5 pl-1 pr-1.5 py-1 rounded-full bg-slate-100 text-sm text-slate-700"
               >
-                <span className="font-medium">
-                  {c.contagem} {tipoContagem}
-                </span>
-                <span className="text-slate-400">· {localNome(c.local)}</span>
+                <button
+                  type="button"
+                  onClick={() => abrirEdicao(c)}
+                  title="Editar"
+                  className="inline-flex items-center gap-1.5 pl-2 pr-1.5 py-0.5 rounded-full hover:bg-slate-200 transition-colors"
+                >
+                  <span className="font-medium">
+                    {c.contagem} {tipoContagem}
+                  </span>
+                  <span className="text-slate-400">· {localNome(c.local)}</span>
+                </button>
                 <button
                   onClick={() => removerContagem(c.id)}
                   className="ml-0.5 p-0.5 rounded-full text-slate-400 sm:opacity-0 group-hover:opacity-100 hover:bg-slate-200 hover:text-red-600 transition-all"
@@ -371,6 +442,71 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
           </div>
         )}
       </div>
+
+      {/* Modal: editar pesagem/contagem */}
+      <Modal
+        open={!!editando}
+        onClose={fecharEdicao}
+        title={usaTara ? 'Editar pesagem' : 'Editar contagem'}
+      >
+        <form onSubmit={salvarEdicao} className="space-y-4">
+          <div>
+            <label htmlFor="local_edicao" className="block text-sm font-medium text-slate-700 mb-1.5">
+              Local
+            </label>
+            <select
+              id="local_edicao"
+              value={localEditado}
+              onChange={(e) => setLocalEditado(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
+            >
+              <option value="">Selecione</option>
+              {locais.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="quantidade_edicao" className="block text-sm font-medium text-slate-700 mb-1.5">
+              Quantidade ({tipoContagem})
+            </label>
+            <input
+              id="quantidade_edicao"
+              type="number"
+              step="0.01"
+              value={valorEditado}
+              onChange={(e) => setValorEditado(e.target.value)}
+              autoFocus
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
+            />
+            {usaTara && (
+              <p className="text-xs text-slate-400 mt-1.5">
+                Informe o valor final da pesagem. A tara não é recalculada aqui.
+              </p>
+            )}
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={fecharEdicao}
+              className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium transition-colors hover:border-slate-300 hover:text-slate-900"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={salvandoEdicao}
+              className="flex-1 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-medium transition-colors hover:bg-slate-800 disabled:opacity-60"
+            >
+              {salvandoEdicao ? 'Salvando...' : 'Salvar'}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   )
 }

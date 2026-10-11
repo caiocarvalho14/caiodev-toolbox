@@ -1,5 +1,5 @@
 // src/modules/conferencia/components/conferencia-views/RegistrosLista.tsx
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { Plus, ClipboardList, ChevronRight, Trash2, Pencil, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
 import { useToast } from '../../../../../hooks/useToast'
 import { Modal } from '../../../../../components/ui/Modal'
@@ -54,7 +54,7 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
     return map
   }, [marcas])
 
-  // soma de contagens por registro, calculada uma vez (evita filter+reduce repetido por linha)
+  // soma de contagens por registro
   const fisicoPorRegistro = useMemo(() => {
     const map = new Map<string, number>()
     for (const c of contagens) {
@@ -62,6 +62,8 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
     }
     return map
   }, [contagens])
+
+  // resenha pura
 
   const nomeItem = (itemId: string) => itensMap.get(itemId)?.nome || 'Item não encontrado'
   const nomeMarcaDoItem = (itemId: string) => {
@@ -93,8 +95,26 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
   }, [registrosDaConferencia, itensMap, marcas])
 
   // --- Ordenação ---
-  const [sortKey, setSortKey] = useState<SortKey>('codigo')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+  // direção
+  const [sortDirection, setSortDirection] = useState(() => {
+    const salvo = sessionStorage.getItem('sortDirection')
+    return salvo ?? 'desc'
+  })
+
+  useEffect(() => {
+    sessionStorage.setItem('sortDirection', sortDirection)
+  }, [sortDirection])
+
+  // chave de ordenação
+  const [sortKey, setSortKey] = useState(() => {
+    const salvo = sessionStorage.getItem('sortKey')
+    return salvo ?? 'codigo'
+  })
+
+  useEffect(() => {
+    sessionStorage.setItem('sortKey', sortKey)
+  }, [sortKey])
+
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {

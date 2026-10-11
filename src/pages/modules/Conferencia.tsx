@@ -1,20 +1,21 @@
 // src/pages/ConferenciaPage.tsx (ou onde você monta a página do módulo)
-import { Tag, ClipboardList, MapPin, Package } from 'lucide-react'
+import { Tag, ClipboardList, MapPin, Package , BarChart3 , ChartLine } from 'lucide-react'
 import PageLayout, { type TabItem } from '../PageLayouts'
+import DashboardConf from './conferencia/components/DashManager'
 import MarcaManager from './conferencia/components/MarcaManager'
 import LocalManager from './conferencia/components/LocalManagers'
 import ItemManager from './conferencia/components/ItemManager'
 import ConferenciaManager from './conferencia/components/ConferenciaManager'
 import RelatorioManager from './conferencia/components/RelatorioManager'
-import { BarChart3 } from 'lucide-react'
 
 
 const tabs: TabItem[] = [
+  { id: 'dashboard', label: 'Dashboard', icon: ChartLine, component: DashboardConf},
   { id: 'conferencias', label: 'Conferências', icon: ClipboardList, component: ConferenciaManager },
   { id: 'itens', label: 'Itens', icon: Package, component: ItemManager },
   { id: 'marcas', label: 'Marcas', icon: Tag, component: MarcaManager },
   { id: 'locais', label: 'Locais', icon: MapPin, component: LocalManager },
-  { id: 'relatorio', label: 'Relatório', icon: BarChart3, component: RelatorioManager },
+  { id: 'relatorio', label: 'Relatórios', icon: BarChart3, component: RelatorioManager },
 ]
 
 export default function ConferenciaPage() {
@@ -27,7 +28,7 @@ export default function ConferenciaPage() {
       activeTabClassName="border-rose-500 text-rose-600"
       backTo="/"
       tabs={tabs}
-      defaultTabId="conferencias"
+      defaultTabId="dashboard"
     />
   )
 }
