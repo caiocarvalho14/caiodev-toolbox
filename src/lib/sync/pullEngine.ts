@@ -1,6 +1,7 @@
 // src/lib/sync/pullEngine.ts
-import { offlineDb } from '../offlineDb'
+import { offlineDb , type LocalRecord } from '../offlineDb'
 import { supabase } from '../supabase'
+
 
 const SYNCABLE_TABLES = [
   'conf_marca_item',
@@ -13,48 +14,58 @@ const SYNCABLE_TABLES = [
 
 export type SyncableTable = (typeof SYNCABLE_TABLES)[number]
 
-async function pullTable(table: SyncableTable) {
+export async function pullTable(table: SyncableTable) {
+  // 1) rede primeiro, fora de qualquer transação do Dexie
   const { data, error } = await supabase.from(table).select('*')
   if (error) throw error
+  const linhasServidor = (data ?? []) as Array<{ id: string; created_at?: string }>
 
-  // ids que têm mutação local ainda não enviada — não sobrescrever esses
-  const pendingItems = await offlineDb.syncQueue.where('table').equals(table).toArray()
-  const pendingIds = new Set(pendingItems.map((i) => i.recordId))
+  // 2) leitura do estado local + escrita na mesma transação: se o usuário salvar algo
+  //    enquanto o fetch estava em andamento, a fila já aparece aqui e o registro não é sobrescrito
+  await offlineDb.transaction(
+    'rw',
+    offlineDb.records,
+    offlineDb.syncQueue,
+    offlineDb.syncMeta,
+    async () => {
+      const pendentes = new Set(
+        (await offlineDb.syncQueue.where('table').equals(table).toArray()).map((i) => i.recordId)
+      )
+      const locais = new Map(
+        (await offlineDb.records.where('table').equals(table).toArray()).map((r) => [r.id, r] as const)
+      )
 
-  const localRecords = await offlineDb.records.where('table').equals(table).toArray()
-  const localIds = new Set(localRecords.map((r) => r.id))
-  const serverIds = new Set((data ?? []).map((d: any) => d.id))
+      const agora = Date.now()
+      const idsServidor = new Set<string>()
+      const paraGravar: LocalRecord[] = []
 
-  const now = Date.now()
+      for (const row of linhasServidor) {
+        idsServidor.add(row.id)
+        if (pendentes.has(row.id)) continue // mutação local ainda não enviada vence
 
-  await offlineDb.transaction('rw', offlineDb.records, offlineDb.syncMeta, async () => {
-    // upsert do que veio do servidor, exceto o que tem pendência local
-    for (const row of data ?? []) {
-      if (pendingIds.has(row.id)) continue
+        const local = locais.get(row.id)
+        if (local && JSON.stringify(local.data) === JSON.stringify(row)) continue // nada mudou
 
-      await offlineDb.records.put({
-        table,
-        id: row.id,
-        data: row,
-        updatedAt: now,
-      })
-    }
-
-    // remove local o que não existe mais no servidor (e não é criação local pendente)
-    for (const localId of localIds) {
-      if (!serverIds.has(localId) && !pendingIds.has(localId)) {
-        await offlineDb.records.delete([table, localId])
+        // registro novo neste aparelho: usa a data de criação (ordem estável);
+        // registro alterado no servidor: sobe pro topo
+        const criadoEm = row.created_at ? Date.parse(row.created_at) : NaN
+        paraGravar.push({
+          table,
+          id: row.id,
+          data: row,
+          updatedAt: local || Number.isNaN(criadoEm) ? agora : criadoEm,
+        })
       }
+
+      const paraRemover: [string, string][] = []
+      for (const id of locais.keys()) {
+        if (!idsServidor.has(id) && !pendentes.has(id)) paraRemover.push([table, id])
+      }
+
+      // só escreve quando houve mudança de verdade: sem isso, toda lista re-renderiza a cada pull
+      if (paraGravar.length) await offlineDb.records.bulkPut(paraGravar)
+      if (paraRemover.length) await offlineDb.records.bulkDelete(paraRemover)
+      await offlineDb.syncMeta.put({ table, lastPulledAt: agora })
     }
-
-    await offlineDb.syncMeta.put({ table, lastPulledAt: now })
-  })
+  )
 }
-
-export async function pullAll() {
-  for (const table of SYNCABLE_TABLES) {
-    await pullTable(table)
-  }
-}
-
-export { pullTable }

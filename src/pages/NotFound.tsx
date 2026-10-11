@@ -1,5 +1,4 @@
 // pages/NotFound.tsx
-import RippleButton from "../components/RippleButton";
 import { Link } from "react-router-dom";
 import { Home, ArrowLeft, SearchX } from "lucide-react";
 

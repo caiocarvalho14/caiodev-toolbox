@@ -1,7 +1,6 @@
 // src/lib/sync/syncEngine.ts
 import { offlineDb, type SyncQueueItem } from '../offlineDb'
 import { supabase } from '../supabase'
-import { pullAll } from './pullEngine'
 
 let syncing = false
 let pendingRerun = false

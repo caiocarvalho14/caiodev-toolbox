@@ -369,8 +369,6 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {linhas.map(({ registro: r, codigo, marca, nome, qtdFisico, divergencia }) => {
-                const ok = Math.abs(divergencia) < 0.001
-
                 return (
                   <tr
                     key={r.id}

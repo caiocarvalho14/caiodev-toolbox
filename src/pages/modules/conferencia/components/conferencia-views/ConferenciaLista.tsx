@@ -1,5 +1,5 @@
 // src/modules/conferencia/components/conferencia-views/ConferenciasLista.tsx
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Plus, Pencil, Trash2, ClipboardList, ChevronRight, Search, X } from 'lucide-react'
 import { useToast } from '../../../../../hooks/useToast'
 import { Modal } from '../../../../../components/ui/Modal'
@@ -19,8 +19,8 @@ interface Props {
 
 export default function ConferenciasLista({ onSelect }: Props) {
   const { data: conferencias, loading, reload } = useOfflineList(conferenciasRepository, "conf_conferencia")
-  const { data: modelos } = useOfflineList(modelosRepository, "conf_modelo")
-  const { data: modeloItens } = useOfflineList(modeloItensRepository, "conf_modelo_item")
+  const { data: modelos } = useOfflineList(modelosRepository)
+  const { data: modeloItens } = useOfflineList(modeloItensRepository)
 
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Conferencia | null>(null)
@@ -31,8 +31,22 @@ export default function ConferenciasLista({ onSelect }: Props) {
   const { toast } = useToast()
   const hoje = new Date()
   const dataFormatada = hoje.toISOString().split('T')[0];
-  const [dataFiltro, setDataFiltro] = useState(dataFormatada)
-  
+  // const [dataFiltro, setDataFiltro] = useState(dataFormatada)
+
+  const [dataFiltro, setDataFiltro] = useState(() => {
+    const salvo = sessionStorage.getItem('dataFiltro')
+    return salvo ?? dataFormatada ?? ''
+  })
+
+  useEffect(() => {
+    sessionStorage.setItem('dataFiltro', dataFiltro)
+  }, [dataFiltro])
+
+  const limparFiltros = () => {
+    setSearch('')
+    setDataFiltro('')
+  }
+
   const [search, setSearch] = useState('')
 
   const openNew = () => {
@@ -60,7 +74,7 @@ export default function ConferenciasLista({ onSelect }: Props) {
         id: editing?.id,
         nome: form.nome,
         data: form.data,
-        observacao: form.observacao,
+        observacao: form.observacao
       })
 
       // só na criação (não na edição) aplica o modelo selecionado
@@ -116,18 +130,13 @@ export default function ConferenciasLista({ onSelect }: Props) {
     }
   }
 
-  const filtered = conferencias.filter((c) => {
+  const filtered = conferencias.sort((a, b) => (b.data.localeCompare(a.data))).filter((c) => {
     const bateNome = c.nome.toLowerCase().includes(search.toLowerCase())
     const bateData = !dataFiltro || c.data === dataFiltro
     return bateNome && bateData
   })
 
   const temFiltroAtivo = search.trim() !== '' || dataFiltro !== ''
-
-  const limparFiltros = () => {
-    setSearch('')
-    setDataFiltro('')
-  }
 
   const qtdItensDoModelo = (modeloId: string) =>
     modeloItens.filter((mi) => mi.modelo === modeloId).length
@@ -319,8 +328,8 @@ export default function ConferenciasLista({ onSelect }: Props) {
         description={
           toDelete
             ? `Tem certeza que deseja remover a conferência de ${new Date(
-                toDelete.data + 'T00:00:00'
-              ).toLocaleDateString('pt-BR')}? Registros vinculados podem ser afetados. Esta ação não pode ser desfeita.`
+              toDelete.data + 'T00:00:00'
+            ).toLocaleDateString('pt-BR')}? Registros vinculados podem ser afetados. Esta ação não pode ser desfeita.`
             : ''
         }
         confirmLabel="Remover"
