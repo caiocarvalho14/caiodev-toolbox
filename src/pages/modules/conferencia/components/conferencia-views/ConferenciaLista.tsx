@@ -11,8 +11,13 @@ import { modeloItensRepository } from '../../../../modules/conferencia/repositor
 import { registrosRepository } from '../../../../modules/conferencia/repositories/registrosRespoitory'
 import type { Conferencia } from '../../../../modules/conferencia/types/Conferencia'
 import { formatarDataAtual } from '../../../../../lib/functions'
+import { useAuth } from '../../../../../contexts/AuthContext'
+import { filiaisRepository } from '../../repositories/filiaisRepository'
+import { useFilialFiltro } from '../../hooks/useFilialFiltro'
+import { FilialSelect } from '../FilialSelect'
+import { usuariosRepository, nomeDoUsuario } from '../../../../modules/conferencia/repositories/usuariosRepository'
 
-const empty = { nome: '', data: new Date().toISOString().slice(0, 10), observacao: '', modelo: '' }
+const empty = { nome: '', data: new Date().toISOString().slice(0, 10), observacao: '', modelo: '', filial: '' }
 
 interface Props {
   onSelect: (conferencia: Conferencia) => void
@@ -22,6 +27,11 @@ export default function ConferenciasLista({ onSelect }: Props) {
   const { data: conferencias, loading, reload } = useOfflineList(conferenciasRepository, "conf_conferencia")
   const { data: modelos } = useOfflineList(modelosRepository)
   const { data: modeloItens } = useOfflineList(modeloItensRepository)
+  const { data: usuarios } = useOfflineList(usuariosRepository, 'sistema_usuario')
+  const { user } = useAuth()
+  const { data: filiais } = useOfflineList(filiaisRepository, 'conf_filial')
+  const [filialFiltro, setFilialFiltro] = useFilialFiltro()
+  const nomeFilial = (id: string | null | undefined) => filiais.find((f) => f.id === id)?.nome ?? null
 
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Conferencia | null>(null)
@@ -46,20 +56,22 @@ export default function ConferenciasLista({ onSelect }: Props) {
   const limparFiltros = () => {
     setSearch('')
     setDataFiltro('')
+    setFilialFiltro('')
   }
 
   const [search, setSearch] = useState('')
 
   const openNew = () => {
     setEditing(null)
-    setForm(empty)
+    // nova conferência já vem na filial filtrada (ou na única que existir)
+    setForm({ ...empty, filial: filialFiltro || (filiais.length === 1 ? filiais[0].id : '') })
     setOpen(true)
   }
 
   const openEdit = (c: Conferencia, e: React.MouseEvent) => {
     e.stopPropagation()
     setEditing(c)
-    setForm({ nome: c.nome || '', data: c.data, observacao: c.observacao || '', modelo: '' })
+    setForm({ nome: c.nome || '', data: c.data, observacao: c.observacao || '', modelo: '', filial: c.filial ?? '' })
     setOpen(true)
   }
 
@@ -70,6 +82,10 @@ export default function ConferenciasLista({ onSelect }: Props) {
       toast({ variant: 'destructive', title: 'Data é obrigatória' })
       return
     }
+    if (!form.filial) {
+      toast({ variant: 'destructive', title: 'Filial é obrigatória' })
+      return
+    }
     try {
       setSaving(true)
       const conferenciaSalva = await conferenciasRepository.save({
@@ -77,7 +93,10 @@ export default function ConferenciasLista({ onSelect }: Props) {
         nome: form.nome,
         data: form.data,
         observacao: form.observacao,
-        created_at: currentConferencia != undefined ? String(currentConferencia?.created_at) : formatarDataAtual()
+        filial: form.filial,
+        // edição mantém o criador original; criação grava o usuário logado
+        criador_id: editing ? currentConferencia?.criador_id ?? null : user?.id ?? null,
+        created_at:currentConferencia != undefined ? String(currentConferencia?.created_at) : formatarDataAtual()
       })
 
       // só na criação (não na edição) aplica o modelo selecionado
@@ -137,10 +156,11 @@ export default function ConferenciasLista({ onSelect }: Props) {
   const filtered = conferencias.sort((a, b) => (b.data.localeCompare(a.data))).filter((c) => {
     const bateNome = c.nome.toLowerCase().includes(search.toLowerCase())
     const bateData = !dataFiltro || c.data === dataFiltro
-    return bateNome && bateData
+    const bateFilial = !filialFiltro || c.filial === filialFiltro
+    return bateNome && bateData && bateFilial
   })
 
-  const temFiltroAtivo = search.trim() !== '' || dataFiltro !== ''
+  const temFiltroAtivo = search.trim() !== '' || dataFiltro !== '' || filialFiltro !== ''
 
   const qtdItensDoModelo = (modeloId: string) =>
     modeloItens.filter((mi) => mi.modelo === modeloId).length
@@ -177,6 +197,7 @@ export default function ConferenciasLista({ onSelect }: Props) {
             className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
           />
         </div>
+        <FilialSelect filiais={filiais} value={filialFiltro} onChange={setFilialFiltro} />
         <input
           type="date"
           value={dataFiltro}
@@ -221,6 +242,14 @@ export default function ConferenciasLista({ onSelect }: Props) {
                     hour: '2-digit',
                     minute: '2-digit',
                   }) : '(Sincronize para atualizar a data.)'}
+                  {nomeFilial(c.filial) && (
+                    <p className="text-xs font-medium text-slate-600 mt-1">{nomeFilial(c.filial)}</p>
+                  )}
+                  {nomeDoUsuario(usuarios, c.criador_id) && (
+                    <p className="text-xs text-slate-500 mt-1">
+                      Criada por {nomeDoUsuario(usuarios, c.criador_id)}
+                    </p>
+                  )}
                   {c.observacao && (
                     <p className="text-xs text-slate-400 truncate mt-1">{c.observacao}</p>
                   )}
@@ -262,6 +291,19 @@ export default function ConferenciasLista({ onSelect }: Props) {
               onChange={(e) => setForm({ ...form, data: e.target.value })}
               autoFocus
               className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
+            />
+          </div>
+          <div>
+            <label htmlFor="filial" className="block text-sm font-medium text-slate-700 mb-1.5">
+              Filial *
+            </label>
+            <FilialSelect
+              id="filial"
+              filiais={filiais}
+              value={form.filial}
+              onChange={(filial) => setForm({ ...form, filial })}
+              incluirTodas={false}
+              className="w-full"
             />
           </div>
           <div>

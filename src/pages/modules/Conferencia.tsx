@@ -1,5 +1,6 @@
 // src/pages/ConferenciaPage.tsx (ou onde você monta a página do módulo)
-import { Tag, ClipboardList, MapPin, Package , BarChart3 , ChartLine } from 'lucide-react'
+import { Tag, ClipboardList, MapPin, Package , BarChart3 , ChartLine, Building2 } from 'lucide-react'
+import FilialManager from './conferencia/components/FilialManager'
 import PageLayout, { type TabItem } from '../PageLayouts'
 import DashboardConf from './conferencia/components/DashManager'
 import MarcaManager from './conferencia/components/MarcaManager'
@@ -18,6 +19,7 @@ const tabs: TabItem[] = [
   { id: 'itens', label: 'Itens', icon: Package, component: ItemManager },
   { id: 'marcas', label: 'Marcas', icon: Tag, component: MarcaManager },
   { id: 'locais', label: 'Locais', icon: MapPin, component: LocalManager },
+  { id: 'filiais', label: 'Filiais', icon: Building2, component: FilialManager },
   { id: 'relatorio', label: 'Relatórios', icon: BarChart3, component: RelatorioManager },
 ]
 

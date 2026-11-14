@@ -17,6 +17,8 @@ export function RelatorioTabela({ relatorio }: Props) {
           </h3>
           <p className="text-xs text-slate-500">
             {new Date(conferencia.data + 'T00:00:00').toLocaleDateString('pt-BR')}
+            {relatorio.filialNome && ` · ${relatorio.filialNome}`}
+            {relatorio.criadorNome &&` · Criada por ${relatorio.criadorNome}`}
           </p>
         </div>
         <span

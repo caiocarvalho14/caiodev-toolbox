@@ -5,4 +5,6 @@ export interface Conferencia {
   data: string
   created_at : string
   observacao: string | null
+  criador_id?: string | null
+  filial?: string | null
 }

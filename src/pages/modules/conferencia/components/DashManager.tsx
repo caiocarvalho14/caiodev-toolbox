@@ -1,232 +1,258 @@
-// src/modules/conferencia/components/DashboardManager.tsx
-import { useMemo, useState } from 'react'
-import { ClipboardList, Package, Scale, type LucideIcon } from 'lucide-react'
+// src/modules/conferencia/components/DashManager.tsx
+import { useEffect, useMemo, useState } from 'react'
 import { useOfflineList } from '../../../../hooks/useOfflineList'
-import { conferenciasRepository } from '../../../modules/conferencia/repositories/conferenciaRepository'
-import { registrosRepository } from '../../../modules/conferencia/repositories/registrosRespoitory'
-import { contagensRepository } from '../../../modules/conferencia/repositories/contagensRepository'
-import { itensRepository } from '../../../modules/conferencia/repositories/itensRepository'
-import { marcasRepository } from '../../../modules/conferencia/repositories/marcasRepository'
-import { locaisRepository } from '../../../modules/conferencia/repositories/locaisRepository'
-import { CalendarioConferencias } from './dashboard-views/CalendarioConferencias'
-import { GraficoSistemaEncontrado, type LinhaGrafico } from './dashboard-views/GraficoSistemaEncontrado'
-import { GraficoPizzaLocais, type EstoqueLocal } from './dashboard-views/GraficoPizzaLocais'
+import { conferenciasRepository } from '../repositories/conferenciaRepository'
+import { registrosRepository } from '../repositories/registrosRespoitory'
+import { contagensRepository } from '../repositories/contagensRepository'
+import { itensRepository } from '../repositories/itensRepository'
+import { marcasRepository } from '../repositories/marcasRepository'
+import { locaisRepository } from '../repositories/locaisRepository'
+import { filiaisRepository } from '../repositories/filiaisRepository'
+import { useFilialFiltro } from '../hooks/useFilialFiltro'
 import { formatarDataHora } from '../../../../lib/functions'
+import {
+  dentroDoPeriodo,
+  fmtData,
+  fmtNum,
+  fmtPct,
+  fmtSinal,
+  montarFatos,
+  ordemCronologica,
+  periodoAnterior,
+  periodoDoPreset,
+  resumirConferencias,
+  resumirItens,
+  totalizar,
+  type Periodo,
+  type Totais,
+} from '../lib/dashboardMetricas'
+import { FILTROS_PADRAO, FiltrosDashboard, type EstadoFiltros } from './dashboard-views/FiltrosDashboard'
+import { KpiTile } from './dashboard-views/KpiTile'
+import { GraficoTendencia } from './dashboard-views/GraficoTendencia'
+import { RankingItens } from './dashboard-views/RankingItens'
+import { ComparativoConferencias } from './dashboard-views/ComparativoConferencias'
+import { GraficoSistemaEncontrado, type LinhaGrafico } from './dashboard-views/GraficoSistemaEncontrado'
+import { COR } from './dashboard-views/dashCores'
 
-const formatarData = (iso: string) => iso.split('-').reverse().join('/')
+const CHAVE_FILTROS = 'conf_dash_filtros'
 
+function lerFiltros(): EstadoFiltros {
+  try {
+    const salvo = localStorage.getItem(CHAVE_FILTROS)
+    if (!salvo) return FILTROS_PADRAO
+    const { preset, custom, tolerancia } = { ...FILTROS_PADRAO, ...JSON.parse(salvo) }
+    return { preset, custom, tolerancia }
+  } catch {
+    return FILTROS_PADRAO
+  }
+}
 
-function KpiCard({
-  icon: Icon,
-  titulo,
-  valor,
-  detalhe,
-}: {
-  icon: LucideIcon
-  titulo: string
-  valor: number
-  detalhe?: string
-}) {
-  return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-5 min-w-0">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-slate-500">{titulo}</span>
-        <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center">
-          <Icon className="w-4 h-4 text-slate-600" />
-        </div>
-      </div>
-      <p className="text-3xl font-semibold text-slate-900 mt-3 tabular-nums">{valor.toLocaleString('pt-BR')}</p>
-      {detalhe && <p className="text-xs text-slate-400 mt-1">{detalhe}</p>}
-    </div>
-  )
+/** variação para o KpiTile; null quando não há período anterior comparável */
+function variacao(atual: number | null, anterior: number | null, formatar: (d: number) => string, melhorQuando: 'sobe' | 'desce') {
+  if (atual == null || anterior == null) return null
+  const delta = atual - anterior
+  return { delta, texto: `${formatar(delta)} vs anterior`, melhorQuando }
 }
 
 export default function DashboardManager() {
-  const { data: conferencias, loading: l1 } = useOfflineList(conferenciasRepository, 'conf_conferencia')
+  const { data: todasConferencias, loading: l1 } = useOfflineList(conferenciasRepository, 'conf_conferencia')
   const { data: registros, loading: l2 } = useOfflineList(registrosRepository, 'conf_registro')
   const { data: contagens, loading: l3 } = useOfflineList(contagensRepository, 'conf_contagem')
   const { data: itens, loading: l4 } = useOfflineList(itensRepository, 'conf_item')
   const { data: marcas, loading: l5 } = useOfflineList(marcasRepository, 'conf_marca_item')
   const { data: locais, loading: l6 } = useOfflineList(locaisRepository, 'conf_local_contagem')
+  const { data: filiais } = useOfflineList(filiaisRepository, 'conf_filial')
+  const [filial, setFilial] = useFilialFiltro()
 
-  const [selecionadaId, setSelecionadaId] = useState<string | null>(null)
-  const [mesManual, setMesManual] = useState<{ ano: number; mes: number } | null>(null)
-
-  // mais recentes primeiro (datas ISO ordenam como texto)
-  const conferenciasOrdenadas = useMemo(
-    () => [...conferencias].sort((a, b) => b.data.localeCompare(a.data)),
-    [conferencias]
-  )
-
-  // sem seleção explícita (ou se a selecionada sumiu), usa a mais recente
-  const conferenciaSelecionada =
-    conferenciasOrdenadas.find((c) => c.id === selecionadaId) ?? conferenciasOrdenadas[0] ?? null
-
-  // --- KPIs ---
-  const itensConferidos = useMemo(() => new Set(registros.map((r) => r.item)).size, [registros])
-  const mediaPesagens = conferencias.length > 0 ? contagens.length / conferencias.length : 0
-
-  // --- Calendário ---
-  const diasComConferencia = useMemo(() => {
-    const map = new Map<string, number>()
-    for (const c of conferencias) map.set(c.data, (map.get(c.data) ?? 0) + 1)
-    return map
-  }, [conferencias])
-
-  const hoje = new Date()
-  const mesBase = conferenciaSelecionada
-    ? {
-      ano: Number(conferenciaSelecionada.data.slice(0, 4)),
-      mes: Number(conferenciaSelecionada.data.slice(5, 7)) - 1,
+  const [filtros, setFiltros] = useState<EstadoFiltros>(lerFiltros)
+  useEffect(() => {
+    try {
+      localStorage.setItem(CHAVE_FILTROS, JSON.stringify(filtros))
+    } catch {
+      // sem armazenamento: o filtro só não fica lembrado
     }
-    : { ano: hoje.getFullYear(), mes: hoje.getMonth() }
-  const mesVisivel = mesManual ?? mesBase // o calendário acompanha a conferência até o usuário navegar
+  }, [filtros])
 
-  const mudarMes = (delta: number) => {
-    const d = new Date(mesVisivel.ano, mesVisivel.mes + delta, 1)
-    setMesManual({ ano: d.getFullYear(), mes: d.getMonth() })
-  }
+  // Seleções independentes: mudar uma seção não mexe nas outras (nem no tamanho delas),
+  // assim a página não "pula" quando o usuário troca a conferência lá embaixo.
+  const [destaqueId, setDestaqueId] = useState<string | null>(null) // coluna marcada na evolução
+  const [comparar, setComparar] = useState<{ a: string | null; b: string | null } | null>(null)
+  const [detalheId, setDetalheId] = useState<string | null>(null) // Sistema × Encontrado
 
-  const selecionarDia = (dataIso: string) => {
-    const doDia = conferenciasOrdenadas.filter((c) => c.data === dataIso)
-    if (doDia.length === 0) return
-    // vários no mesmo dia: cada clique avança para a próxima
-    const atual = doDia.findIndex((c) => c.id === conferenciaSelecionada?.id)
-    setSelecionadaId(doDia[(atual + 1) % doDia.length].id)
-    setMesManual(null)
-  }
+  const periodo = useMemo(() => periodoDoPreset(filtros.preset, filtros.custom), [filtros.preset, filtros.custom])
+  const anterior = useMemo(() => periodoAnterior(periodo), [periodo])
 
-  const selecionarConferencia = (id: string) => {
-    setSelecionadaId(id)
-    setMesManual(null)
-  }
-
-  // --- Lookups O(1) e somas numa passada só ---
-  const itensMap = useMemo(() => new Map(itens.map((i) => [i.id, i] as const)), [itens])
-  const marcasMap = useMemo(() => new Map(marcas.map((m) => [m.id, m] as const)), [marcas])
-  const locaisMap = useMemo(() => new Map(locais.map((l) => [l.id, l] as const)), [locais])
-  const registrosMap = useMemo(() => new Map(registros.map((r) => [r.id, r] as const)), [registros])
-
-  const fisicoPorRegistro = useMemo(() => {
-    const map = new Map<string, number>()
-    for (const c of contagens) map.set(c.registro, (map.get(c.registro) ?? 0) + c.contagem)
-    return map
-  }, [contagens])
-
-  // --- Gráfico de barras: itens da conferência selecionada ---
-  const linhasGrafico = useMemo<LinhaGrafico[]>(() => {
-    if (!conferenciaSelecionada) return []
-
-    return registros
-      .filter((r) => r.conferencia === conferenciaSelecionada.id)
-      .map((r): LinhaGrafico => {
-        const item = itensMap.get(r.item)
-        const marca = item?.marca ? marcasMap.get(item.marca) : undefined
-        const fisico = fisicoPorRegistro.get(r.id) ?? 0
-
-        return {
-          id: r.id,
-          nome: item ? (marca ? `${marca.nome} ${item.nome}` : item.nome) : 'Item removido',
-          unidade: item?.tipo_contagem ?? 'KG',
-          sistema: r.qtd_sistema,
-          fisico,
-          divergencia: fisico - r.qtd_sistema,
-        }
-      })
-  }, [conferenciaSelecionada, registros, itensMap, marcasMap, fisicoPorRegistro])
-
-  const opcoesConferencia = useMemo(
-    () =>
-      conferenciasOrdenadas.map((c) => ({
-        id: c.id,
-        rotulo: `${formatarDataHora(c.created_at)}${c.nome ? ` — ${c.nome}` : ''}`,
-        data: c.data
-      })),
-    [conferenciasOrdenadas]
+  const daFilial = useMemo(
+    () => todasConferencias.filter((c) => !filial || c.filial === filial),
+    [todasConferencias, filial]
   )
 
-  // --- Pizza: quantidade contada por local (todas as conferências), separada por unidade ---
-  const estoquePorLocal = useMemo<EstoqueLocal[]>(() => {
-    const acumulado = new Map<string, EstoqueLocal>()
+  const recorte = (p: Periodo) => {
+    const conferencias = daFilial.filter((c) => dentroDoPeriodo(c.data, p)).sort(ordemCronologica)
+    const fatos = montarFatos(conferencias, registros, contagens, itens, marcas, filtros.tolerancia)
+    const resumos = resumirConferencias(conferencias, fatos)
+    return { conferencias, fatos, resumos, totais: totalizar(resumos) }
+  }
 
+  const atual = useMemo(
+    () => recorte(periodo),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [daFilial, registros, contagens, itens, marcas, filtros.tolerancia, periodo]
+  )
+  const prev = useMemo<Totais | null>(
+    () => (anterior ? recorte(anterior).totais : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [daFilial, registros, contagens, itens, marcas, filtros.tolerancia, anterior]
+  )
+
+  const itensResumo = useMemo(() => resumirItens(atual.fatos, atual.conferencias), [atual])
+  const comPesagem = useMemo(() => atual.resumos.filter((r) => r.conferidos > 0), [atual.resumos])
+  const ultimaId = comPesagem[comPesagem.length - 1]?.conferencia.id ?? null
+  const existe = (id: string | null) => (id && comPesagem.some((r) => r.conferencia.id === id) ? id : null)
+  const anteriorDe = (id: string | null) => {
+    const i = comPesagem.findIndex((r) => r.conferencia.id === id)
+    return i > 0 ? comPesagem[i - 1].conferencia.id : null
+  }
+
+  const destaque = existe(destaqueId)
+  const detalhe = existe(detalheId) ?? ultimaId
+  // comparação padrão: a penúltima contra a última conferência
+  const compB = comparar ? existe(comparar.b) : ultimaId
+  const compA = comparar ? existe(comparar.a) : anteriorDe(ultimaId)
+
+  // clicar numa coluna da evolução leva a conferência para a comparação e para o detalhe
+  const selecionarNaEvolucao = (id: string) => {
+    setDestaqueId(id)
+    setComparar({ a: anteriorDe(id), b: id })
+    setDetalheId(id)
+  }
+
+  const resetarSelecoes = () => {
+    setDestaqueId(null)
+    setComparar(null)
+    setDetalheId(null)
+  }
+
+  // ---------- Sistema × Encontrado ----------
+  const linhasDetalhe = useMemo<LinhaGrafico[]>(() => {
+    if (!detalhe) return []
+    const nomesLocais = new Map(locais.map((l) => [l.id, l.nome] as const))
+    const pesagens = new Map<string, LinhaGrafico['pesagens']>()
     for (const c of contagens) {
-      const registro = registrosMap.get(c.registro)
-      if (!registro) continue // contagem sem registro (órfã)
-
-      const unidade = itensMap.get(registro.item)?.tipo_contagem ?? 'KG'
-      const chave = `${c.local}|${unidade}`
-      const atual = acumulado.get(chave) ?? {
-        id: chave,
-        nome: locaisMap.get(c.local)?.nome ?? 'Local removido',
-        unidade,
-        valor: 0,
-      }
-      atual.valor += c.contagem
-      acumulado.set(chave, atual)
+      const lista = pesagens.get(c.registro) ?? []
+      lista.push({ id: c.id, localId: c.local, localNome: nomesLocais.get(c.local) ?? 'Local removido', valor: c.contagem })
+      pesagens.set(c.registro, lista)
     }
+    return atual.fatos
+      .filter((f) => f.conferenciaId === detalhe)
+      .map((f) => ({
+        id: f.registroId,
+        nome: f.marcaNome ? `${f.marcaNome} ${f.itemNome}` : f.itemNome,
+        unidade: f.unidade,
+        sistema: f.sistema,
+        fisico: f.fisico,
+        divergencia: f.divergencia,
+        pesagens: pesagens.get(f.registroId) ?? [],
+      }))
+  }, [detalhe, atual.fatos, contagens, locais])
 
-    return [...acumulado.values()]
-  }, [contagens, registrosMap, itensMap, locaisMap])
+  const opcoesDetalhe = useMemo(
+    () =>
+      [...comPesagem].reverse().map((r) => ({
+        id: r.conferencia.id,
+        rotulo: `${formatarDataHora(r.conferencia.created_at)}${r.conferencia.nome ? ` — ${r.conferencia.nome}` : ''}`,
+        data: r.conferencia.data,
+      })),
+    [comPesagem]
+  )
 
   if ([l1, l2, l3, l4, l5, l6].some(Boolean)) {
     return <div className="text-center py-16 text-slate-400 text-sm">Carregando...</div>
   }
 
+  const t = atual.totais
+  const textoPeriodo =
+    periodo.inicio && periodo.fim
+      ? `${fmtData(periodo.inicio)} a ${fmtData(periodo.fim)}`
+      : periodo.inicio
+        ? `desde ${fmtData(periodo.inicio)}`
+        : periodo.fim
+          ? `até ${fmtData(periodo.fim)}`
+          : 'todo o histórico'
+  const pts = (d: number) => `${d > 0 ? '+' : ''}${(d * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} p.p.`
+
   return (
-    <div className="space-y-6 min-w-0">
-      <div>
-        <h2 className="text-2xl font-semibold text-slate-900">Dashboard</h2>
-        <p className="text-sm text-slate-500 mt-0.5">Visão geral das conferências</p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <KpiCard
-          icon={ClipboardList}
-          titulo="Conferências"
-          valor={conferencias.length}
-          detalhe={conferenciasOrdenadas[0] ? `Última em ${formatarData(conferenciasOrdenadas[0].data)}` : undefined}
-        />
-        <KpiCard
-          icon={Scale}
-          titulo="Pesagens"
-          valor={contagens.length}
-          detalhe={
-            conferencias.length > 0
-              ? `${mediaPesagens.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} por conferência`
-              : undefined
-          }
-        />
-        <KpiCard icon={Package} titulo="Itens" valor={itens.length} detalhe={`${itensConferidos} já conferidos`} />
-      </div>
-
-      <div className="grid lg:grid-cols-[320px_minmax(0,1fr)] gap-6 items-start min-w-0">
-        <div className="space-y-6 min-w-0">
-          <CalendarioConferencias
-            ano={mesVisivel.ano}
-            mes={mesVisivel.mes}
-            diasComConferencia={diasComConferencia}
-            diaSelecionado={conferenciaSelecionada?.data ?? null}
-            onMudarMes={mudarMes}
-            onSelecionarDia={selecionarDia}
-          />
-          <GraficoPizzaLocais
-            dados={estoquePorLocal}
-            opcoes={opcoesConferencia} // mesmas opcoes do GraficoSistemaEncontrado
-
-            selecionadaId={conferenciaSelecionada?.id ?? null}
-
-          />
+    <div className="space-y-5 min-w-0">
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-semibold text-slate-900">Dashboard</h2>
+          <p className="text-sm text-slate-500 mt-0.5">
+            {textoPeriodo} · {t.conferencias} {t.conferencias === 1 ? 'conferência' : 'conferências'}
+          </p>
         </div>
-
-        <GraficoSistemaEncontrado
-          opcoes={opcoesConferencia}
-          selecionadaId={conferenciaSelecionada?.id ?? null}
-          dataConferenciaSelecionada={conferenciaSelecionada?.data ?? null}
-          onSelecionar={selecionarConferencia}
-          linhas={linhasGrafico}
-
+        <FiltrosDashboard
+          filtros={filtros}
+          onChange={(f) => {
+            setFiltros(f)
+            resetarSelecoes()
+          }}
+          filiais={filiais}
+          filial={filial}
+          onFilial={(id) => {
+            setFilial(id)
+            resetarSelecoes()
+          }}
         />
       </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <KpiTile
+          titulo="Acuracidade"
+          valor={fmtPct(t.acuracidade)}
+          detalhe={`${t.ok} de ${t.conferidos} itens`}
+          variacao={variacao(t.acuracidade, prev?.acuracidade ?? null, pts, 'sobe')}
+        />
+        <KpiTile
+          titulo="Erro total (kg)"
+          valor={fmtNum(t.absoluta, 1)}
+          detalhe={t.conferidos > 0 ? `${fmtNum(t.absoluta / t.conferidos)} por item` : undefined}
+          variacao={variacao(t.absoluta, prev?.absoluta ?? null, (d) => fmtSinal(d, 1), 'desce')}
+        />
+        <KpiTile
+          titulo="Falta (kg)"
+          marcador={COR.falta}
+          valor={fmtNum(t.faltaTotal, 1)}
+          detalhe={`${t.falta} ${t.falta === 1 ? 'item' : 'itens'}`}
+          variacao={variacao(t.faltaTotal, prev?.faltaTotal ?? null, (d) => fmtSinal(d, 1), 'desce')}
+        />
+        <KpiTile
+          titulo="Sobra (kg)"
+          marcador={COR.sobra}
+          valor={fmtNum(t.sobraTotal, 1)}
+          detalhe={`${t.sobra} ${t.sobra === 1 ? 'item' : 'itens'}`}
+          variacao={variacao(t.sobraTotal, prev?.sobraTotal ?? null, (d) => fmtSinal(d, 1), 'desce')}
+        />
+      </div>
+
+      <GraficoTendencia resumos={atual.resumos} selecionadaId={destaque} onSelecionar={selecionarNaEvolucao} unidade="KG" />
+
+      <div className="grid xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-5 items-start">
+        <RankingItens itens={itensResumo} />
+        <ComparativoConferencias
+          resumos={atual.resumos}
+          fatos={atual.fatos}
+          aId={compA}
+          bId={compB}
+          onChange={(a, b) => setComparar({ a, b })}
+        />
+      </div>
+
+      <GraficoSistemaEncontrado
+        opcoes={opcoesDetalhe}
+        selecionadaId={detalhe}
+        onSelecionar={setDetalheId}
+        linhas={linhasDetalhe}
+      />
     </div>
   )
 }

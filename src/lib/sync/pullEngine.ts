@@ -6,10 +6,12 @@ import { supabase } from '../supabase'
 const SYNCABLE_TABLES = [
   'conf_marca_item',
   'conf_item',
+  'conf_filial',
   'conf_conferencia',
   'conf_local_contagem',
   'conf_registro',
   'conf_contagem',
+  'sistema_usuario',
 ] as const
 
 export type SyncableTable = (typeof SYNCABLE_TABLES)[number]

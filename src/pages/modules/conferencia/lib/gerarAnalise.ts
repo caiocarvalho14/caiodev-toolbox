@@ -137,12 +137,13 @@ export async function gerarAnalise(
   } = await supabase.auth.getSession()
   if (!session) throw new Error('Sessão expirada. Faça login novamente.')
   const HOST = 'http://localhost:3000/api/'
+  const URL_API = 'https://n8n.caiocarv.com/webhook-test/cc8da448-77bd-41b4-9697-17327893bc6a'
 
-  const res = await fetch(`${HOST}gerar-analise`, {
+  const res = await fetch(URL_API, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${session.access_token}`,
+      // Authorization: `Bearer ${session.access_token}`,
     },
     body: JSON.stringify({ dados }),
   })

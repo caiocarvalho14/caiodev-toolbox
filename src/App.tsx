@@ -16,6 +16,7 @@ import Home from "./pages/Home.tsx"
 import Login from './pages/Login.tsx';
 import NotFound from './pages/NotFound.tsx';
 import AdminPage from './pages/modules/Admin.tsx';
+import ConfigPage from './pages/modules/ConfigPage.tsx';
 
 // modules
 import ConferenciaPage from './pages/modules/Conferencia.tsx';
@@ -36,6 +37,7 @@ function App() {
           <Route element={<Layout />}>
             <Route path="/" element={<Home />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/config" element={<ConfigPage />} />
           </Route>
 
           <Route element={<RouteAccessGuard />}>

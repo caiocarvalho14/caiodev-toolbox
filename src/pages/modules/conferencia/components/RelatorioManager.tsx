@@ -12,6 +12,10 @@ import { montarRelatorio } from '../../../modules/conferencia/lib/relatorio'
 import { exportarRelatorioPdf } from '../../../modules/conferencia/lib/exportarRelatorioPdf'
 import { formatarDataHora } from '../../../../lib/functions'
 import { gerarAnalise } from '../lib/gerarAnalise'
+import { usuariosRepository, nomeDoUsuario } from '../repositories/usuariosRepository'
+import { filiaisRepository } from '../repositories/filiaisRepository'
+import { useFilialFiltro } from '../hooks/useFilialFiltro'
+import { FilialSelect } from './FilialSelect'
 
 export default function RelatorioManager() {
   const { data: conferencias, loading } = useOfflineList(conferenciasRepository, "conf_conferencia")
@@ -20,6 +24,9 @@ export default function RelatorioManager() {
   const { data: itens } = useOfflineList(itensRepository, "conf_item")
   const { data: marcas } = useOfflineList(marcasRepository, "conf_marca_item")
   const { data: locais } = useOfflineList(locaisRepository, "conf_local_contagem")
+  const { data: usuarios } = useOfflineList(usuariosRepository, "sistema_usuario")
+  const { data: filiais } = useOfflineList(filiaisRepository, "conf_filial")
+  const [filialFiltro, setFilialFiltro] = useFilialFiltro()
 
   const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set())
   const [ordenacaoRelatorio, setOrdenacaoRelatorio] = useState('codigo')
@@ -30,16 +37,29 @@ export default function RelatorioManager() {
   const analiseIdRef = useRef(0) // descarta respostas de requisições que ficaram velhas
 
   const conferenciasOrdenadas = useMemo(
-    () => [...conferencias].sort((a, b) => (a.data < b.data ? 1 : -1)),
-    [conferencias]
+    () =>
+      conferencias
+        .filter((c) => !filialFiltro || c.filial === filialFiltro)
+        .sort((a, b) => (a.data < b.data ? 1 : -1)),
+    [conferencias, filialFiltro]
   )
+
+  const trocarFilial = (id: string) => {
+    setFilialFiltro(id)
+    // conferências de outra filial não podem continuar selecionadas
+    setSelecionadas(new Set())
+    analiseIdRef.current++
+    setAnalise(null)
+    setErroAnalise(null)
+    setAnalisando(false)
+  }
 
   const relatorios = useMemo(() => {
     return conferenciasOrdenadas
       .filter((c) => selecionadas.has(c.id))
       .sort((a, b) => (a.data < b.data ? -1 : 1))
-      .map((c) => montarRelatorio(c, registros, contagens, itens, marcas, locais))
-  }, [conferenciasOrdenadas, selecionadas, registros, contagens, itens, marcas, locais])
+      .map((c) => montarRelatorio(c, registros, contagens, itens, marcas, locais, usuarios, filiais))
+  }, [conferenciasOrdenadas, selecionadas, registros, contagens, itens, marcas, locais, usuarios, filiais])
 
   const toggle = (id: string) => {
     setSelecionadas((prev) => {
@@ -95,6 +115,7 @@ export default function RelatorioManager() {
       const texto = await gerarAnalise(relatorios, { ignorarCache: analise !== null })
       if (id !== analiseIdRef.current) return
       setAnalise(texto)
+      console.log(texto)
     } catch (err) {
       if (id !== analiseIdRef.current) return
       setErroAnalise(err instanceof Error ? err.message : 'Erro ao gerar análise.')
@@ -107,6 +128,7 @@ export default function RelatorioManager() {
     <div className="grid lg:grid-cols-[280px_1fr] gap-6 min-w-0">
       <div className="bg-white rounded-2xl border border-slate-200 p-4 h-fit lg:sticky lg:top-24 min-w-0">
         <h3 className="text-sm font-semibold text-slate-900 mb-3">Conferências</h3>
+        <FilialSelect filiais={filiais} value={filialFiltro} onChange={trocarFilial} className="w-full mb-3" />
         {loading ? (
           <p className="text-sm text-slate-400">Carregando...</p>
         ) : conferenciasOrdenadas.length === 0 ? (
@@ -130,6 +152,7 @@ export default function RelatorioManager() {
                   </span>
                   <span className="block text-xs text-slate-400">
                     {formatarDataHora(c.created_at)}
+                    {nomeDoUsuario(usuarios, c.criador_id) && ` · ${nomeDoUsuario(usuarios, c.criador_id)}`}
                   </span>
                 </span>
               </label>
@@ -151,8 +174,8 @@ export default function RelatorioManager() {
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={gerarAnaliseIA}
-              // disabled={relatorios.length === 0 || analisando}
-              disabled
+              disabled={relatorios.length === 0 || analisando}
+              
               title="Gera uma análise dos dados selecionados com IA"
               className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm font-medium hover:border-slate-300 hover:text-slate-900 transition-colors disabled:opacity-50"
             >

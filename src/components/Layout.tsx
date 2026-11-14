@@ -23,13 +23,13 @@ export default function Layout() {
                         >
                             <UserShield className="w-5 h-5" />
                         </a> : ''}
-                        <button
-                            type="button"
+                        <a
+                            href="/config"
                             title="Configurações"
                             className="p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
                         >
                             <Settings className="w-5 h-5" />
-                        </button>
+                        </a>
                         <a href="/logout"
                             title="Sair"
                             className="p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer">

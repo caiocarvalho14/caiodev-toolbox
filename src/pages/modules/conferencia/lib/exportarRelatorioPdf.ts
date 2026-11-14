@@ -15,7 +15,11 @@ export function exportarRelatorioPdf(relatorios: RelatorioConferencia[], ordenac
     const titulo = rel.conferencia.nome
       ? `${rel.conferencia.nome} — ${formatarDataHora(rel.conferencia.created_at)}`
       : new Date(rel.conferencia.data + 'T00:00:00').toLocaleDateString('pt-BR')
-    const observacao = rel.conferencia.observacao ? `Observação: ${rel.conferencia.observacao}` : ``
+    const observacao = [
+      rel.filialNome ? `Filial: ${rel.filialNome}` : '',
+      rel.criadorNome ? `Criada por: ${rel.criadorNome}` : '',
+      rel.conferencia.observacao ? `Observação: ${rel.conferencia.observacao}` : '',
+    ].filter(Boolean).join('   ·   ')
 
     // Se não sobra espaço nem pro título, pula de página antes de desenhar
     if (cursorY + 20 > alturaPagina - margemInferior) {

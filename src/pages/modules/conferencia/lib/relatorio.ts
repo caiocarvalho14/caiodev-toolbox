@@ -5,6 +5,9 @@ import type { Contagem } from '../../../modules/conferencia/types/contagem'
 import type { Item } from '../../../modules/conferencia/types/item'
 import type { MarcaItem } from '../../../modules/conferencia/types/Marcas'
 import type { LocalContagem } from '../../../modules/conferencia/types/localContagem'
+import type { Usuario } from '../types/usuario'
+import type { Filial } from '../types/filial'
+import { nomeDoUsuario } from '../repositories/usuariosRepository'
 
 export interface RelatorioLinha {
   registroId: string
@@ -21,6 +24,8 @@ export interface RelatorioLinha {
 
 export interface RelatorioConferencia {
   conferencia: Conferencia
+  criadorNome: string | null
+  filialNome: string | null
   locaisUsados: LocalContagem[]
   linhas: RelatorioLinha[]
   totalFisico: number
@@ -34,7 +39,9 @@ export function montarRelatorio(
   todasContagens: Contagem[],
   itens: Item[],
   marcas: MarcaItem[],
-  locais: LocalContagem[]
+  locais: LocalContagem[],
+  usuarios: Usuario[] = [],
+  filiais: Filial[] = []
 ): RelatorioConferencia {
   const registros = todosRegistros.filter((r) => r.conferencia === conferencia.id)
   const localIdsUsados = new Set<string>()
@@ -75,6 +82,8 @@ export function montarRelatorio(
 
   return {
     conferencia,
+    criadorNome: nomeDoUsuario(usuarios, conferencia.criador_id),
+    filialNome: filiais.find((f) => f.id === conferencia.filial)?.nome ?? null,
     locaisUsados,
     linhas,
     totalFisico,
