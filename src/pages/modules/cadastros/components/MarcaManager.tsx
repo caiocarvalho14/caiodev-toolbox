@@ -1,21 +1,22 @@
-// src/modules/conferencia/components/MarcaManager.tsx
+// src/pages/modules/cadastros/components/MarcaManager.tsx
 import { useState } from 'react'
 import { Plus, Pencil, Trash2, Search, Tag } from 'lucide-react'
-import { useToast } from '../../../../hooks/useToast.ts'
-import { Modal } from '../../../../components/ui/Modal.tsx'
-import { ConfirmDialog } from '../../../../components/ui/ConfirmDialog.tsx'
-import { useOfflineList } from '../../../../hooks/useOfflineList.ts'
-import { marcasRepository } from '../repositories/marcasRepository.ts'
-import type { MarcaItem } from '../types/Marcas.ts'
+import { useToast } from '../../../../hooks/useToast'
+import { Modal } from '../../../../components/ui/Modal'
+import { ConfirmDialog } from '../../../../components/ui/ConfirmDialog'
+import { useOfflineList } from '../../../../hooks/useOfflineList'
+import { marcasRepository } from '../repositories/marcasRepository'
+import type { MarcaItem } from '../types/marca'
 
 import { useSyncStatusMap } from "../../../../hooks/useSyncStatusMap"
 import { SyncBadge } from '../../../../components/ui/SyncBadge'
+import { motivoParaNaoExcluir } from '../lib/referencias'
 
 const empty = { nome: '', tara_emb: '' }
 
 export default function MarcaManager() {
-  const { data: marcas, loading, reload } = useOfflineList(marcasRepository, 'conf_marca_item')
-  const syncMap = useSyncStatusMap('conf_marca_item') // <- tabela do repositório
+  const { data: marcas, loading, reload } = useOfflineList(marcasRepository, 'cad_marca')
+  const syncMap = useSyncStatusMap('cad_marca') // <- tabela do repositório
 
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<MarcaItem | null>(null)
@@ -68,6 +69,13 @@ export default function MarcaManager() {
 
   const confirmDelete = async () => {
     if (!toDelete) return
+    // dado base compartilhado: não exclui o que outros módulos ainda usam
+    const motivo = await motivoParaNaoExcluir('cad_marca', toDelete.id)
+    if (motivo) {
+      toast({ variant: 'destructive', title: 'Não é possível excluir', description: motivo })
+      setToDelete(null)
+      return
+    }
     try {
       setDeleting(true)
       await marcasRepository.remove(toDelete.id)
@@ -221,7 +229,7 @@ export default function MarcaManager() {
         title="Remover marca?"
         description={
           toDelete
-            ? `Tem certeza que deseja remover "${toDelete.nome}"? Itens vinculados a essa marca podem ser afetados. Esta ação não pode ser desfeita.`
+            ? `Tem certeza que deseja remover "${toDelete.nome}"? Esta ação não pode ser desfeita.`
             : ''
         }
         confirmLabel="Remover"

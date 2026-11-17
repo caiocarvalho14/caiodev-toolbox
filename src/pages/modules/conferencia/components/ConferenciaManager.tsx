@@ -4,18 +4,19 @@ import { Breadcrumb } from '../../../../components/ui/Breadcrumb'
 import ConferenciasLista from './conferencia-views/ConferenciaLista'
 import RegistrosLista from './conferencia-views/RegistrosLista'
 import ContagensDetalhe from './conferencia-views/ContagensDetalhe'
-import { itensRepository } from '../../../modules/conferencia/repositories/itensRepository'
+import { itensRepository } from '../../cadastros/repositories/itensRepository'
 import { useOfflineList } from '../../../../hooks/useOfflineList'
-import type { Conferencia } from '../../../modules/conferencia/types/Conferencia'
+import type { Conferencia, TipoConferencia } from '../../../modules/conferencia/types/Conferencia'
+import { itemDoRegistro } from '../lib/itemDoRegistro'
 import type { RegistroConferencia } from '../../../modules/conferencia/types/registro'
 
 type View = 'lista' | 'registros' | 'contagens'
 
-export default function ConferenciaManager() {
+export default function ConferenciaManager({ tipo = 'normal' }: { tipo?: TipoConferencia }) {
   const [view, setView] = useState<View>('lista')
   const [conferenciaAtiva, setConferenciaAtiva] = useState<Conferencia | null>(null)
   const [registroAtivo, setRegistroAtivo] = useState<RegistroConferencia | null>(null)
-  const { data: itens } = useOfflineList(itensRepository, "conf_item")
+  const { data: itens } = useOfflineList(itensRepository, "cad_item")
 
   const abrirConferencia = (c: Conferencia) => {
     setConferenciaAtiva(c)
@@ -39,7 +40,7 @@ export default function ConferenciaManager() {
   }
 
   const nomeItemAtivo = registroAtivo
-    ? itens.find((i) => i.id === registroAtivo.item)?.nome ?? 'Registro'
+    ? itemDoRegistro(registroAtivo, itens, []).nome
     : ''
 
   return (
@@ -61,7 +62,7 @@ export default function ConferenciaManager() {
         />
       )}
 
-      {view === 'lista' && <ConferenciasLista onSelect={abrirConferencia} />}
+      {view === 'lista' && <ConferenciasLista tipo={tipo} onSelect={abrirConferencia} />}
 
       {view === 'registros' && conferenciaAtiva && (
         <RegistrosLista conferencia={conferenciaAtiva} onSelect={abrirRegistro} />

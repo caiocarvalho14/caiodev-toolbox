@@ -80,7 +80,38 @@ class OfflineDB extends Dexie {
     this.version(3).stores({
       cargosUsuario: 'userId',
     })
+
+    // v4: itens/marcas/locais/filiais viraram o módulo Cadastros (tabelas cad_*).
+    // Leva o cache local e a fila de envio para os nomes novos, sem perder nada pendente.
+    this.version(4)
+      .stores({})
+      .upgrade(async (tx) => {
+        const records = tx.table<LocalRecord, [string, string]>('records')
+        for (const [antiga, nova] of Object.entries(TABELAS_RENOMEADAS)) {
+          const lista = await records.where('table').equals(antiga).toArray()
+          if (lista.length === 0) continue
+          // `table` faz parte da chave primária: grava com o nome novo e apaga o antigo
+          await records.bulkPut(lista.map((r) => ({ ...r, table: nova })))
+          await records.bulkDelete(lista.map((r) => [antiga, r.id] as [string, string]))
+        }
+        await tx
+          .table<SyncQueueItem, string>('syncQueue')
+          .toCollection()
+          .modify((item) => {
+            const nova = TABELAS_RENOMEADAS[item.table]
+            if (nova) item.table = nova
+          })
+        // força um pull completo das tabelas renomeadas
+        await tx.table<SyncMeta, string>('syncMeta').bulkDelete(Object.keys(TABELAS_RENOMEADAS))
+      })
   }
+}
+
+export const TABELAS_RENOMEADAS: Record<string, string> = {
+  conf_item: 'cad_item',
+  conf_marca_item: 'cad_marca',
+  conf_local_contagem: 'cad_local',
+  conf_filial: 'cad_filial',
 }
 
 export const offlineDb = new OfflineDB()

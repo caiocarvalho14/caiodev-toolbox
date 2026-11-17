@@ -4,11 +4,12 @@ import { useOfflineList } from '../../../../hooks/useOfflineList'
 import { conferenciasRepository } from '../repositories/conferenciaRepository'
 import { registrosRepository } from '../repositories/registrosRespoitory'
 import { contagensRepository } from '../repositories/contagensRepository'
-import { itensRepository } from '../repositories/itensRepository'
-import { marcasRepository } from '../repositories/marcasRepository'
-import { locaisRepository } from '../repositories/locaisRepository'
-import { filiaisRepository } from '../repositories/filiaisRepository'
+import { itensRepository } from '../../cadastros/repositories/itensRepository'
+import { marcasRepository } from '../../cadastros/repositories/marcasRepository'
+import { locaisRepository } from '../../cadastros/repositories/locaisRepository'
+import { filiaisRepository } from '../../cadastros/repositories/filiaisRepository'
 import { useFilialFiltro } from '../hooks/useFilialFiltro'
+import { ehRapida } from '../types/Conferencia'
 import { formatarDataHora } from '../../../../lib/functions'
 import {
   dentroDoPeriodo,
@@ -58,10 +59,10 @@ export default function DashboardManager() {
   const { data: todasConferencias, loading: l1 } = useOfflineList(conferenciasRepository, 'conf_conferencia')
   const { data: registros, loading: l2 } = useOfflineList(registrosRepository, 'conf_registro')
   const { data: contagens, loading: l3 } = useOfflineList(contagensRepository, 'conf_contagem')
-  const { data: itens, loading: l4 } = useOfflineList(itensRepository, 'conf_item')
-  const { data: marcas, loading: l5 } = useOfflineList(marcasRepository, 'conf_marca_item')
-  const { data: locais, loading: l6 } = useOfflineList(locaisRepository, 'conf_local_contagem')
-  const { data: filiais } = useOfflineList(filiaisRepository, 'conf_filial')
+  const { data: itens, loading: l4 } = useOfflineList(itensRepository, 'cad_item')
+  const { data: marcas, loading: l5 } = useOfflineList(marcasRepository, 'cad_marca')
+  const { data: locais, loading: l6 } = useOfflineList(locaisRepository, 'cad_local')
+  const { data: filiais } = useOfflineList(filiaisRepository, 'cad_filial')
   const [filial, setFilial] = useFilialFiltro()
 
   const [filtros, setFiltros] = useState<EstadoFiltros>(lerFiltros)
@@ -83,7 +84,8 @@ export default function DashboardManager() {
   const anterior = useMemo(() => periodoAnterior(periodo), [periodo])
 
   const daFilial = useMemo(
-    () => todasConferencias.filter((c) => !filial || c.filial === filial),
+    // conferências rápidas ficam fora: itens digitados na hora não têm cadastro comum para comparar
+    () => todasConferencias.filter((c) => !ehRapida(c) && (!filial || c.filial === filial)),
     [todasConferencias, filial]
   )
 

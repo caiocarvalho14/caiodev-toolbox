@@ -1,4 +1,4 @@
-// src/modules/conferencia/components/FilialSelect.tsx
+// src/pages/modules/cadastros/components/FilialSelect.tsx
 import type { Filial } from '../types/filial'
 
 interface Props {

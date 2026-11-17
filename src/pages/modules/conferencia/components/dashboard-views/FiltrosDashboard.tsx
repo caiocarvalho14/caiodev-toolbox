@@ -1,7 +1,7 @@
 // src/modules/conferencia/components/dashboard-views/FiltrosDashboard.tsx
-import type { Filial } from '../../types/filial'
+import type { Filial } from '../../../cadastros/types/filial'
 import type { Periodo, Preset } from '../../lib/dashboardMetricas'
-import { FilialSelect } from '../FilialSelect'
+import { FilialSelect } from '../../../cadastros/components/FilialSelect'
 
 export interface EstadoFiltros {
   preset: Preset

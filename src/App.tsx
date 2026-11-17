@@ -20,6 +20,7 @@ import ConfigPage from './pages/modules/ConfigPage.tsx';
 
 // modules
 import ConferenciaPage from './pages/modules/Conferencia.tsx';
+import CadastrosPage from './pages/modules/Cadastros.tsx';
 import { Toaster } from './components/Toaster'
 // ...
 <Toaster />
@@ -42,6 +43,7 @@ function App() {
 
           <Route element={<RouteAccessGuard />}>
             <Route path='/conferencia' element={<ConferenciaPage />} />
+            <Route path='/cadastros' element={<CadastrosPage />} />
           </Route>
 
         </Route>

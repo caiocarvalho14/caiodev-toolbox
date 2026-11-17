@@ -2,6 +2,7 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import type { RelatorioConferencia } from './relatorio'
+import { descreverTempo } from './tempoConferencia'
 import { formatarDataHora } from '../../../../lib/functions'
 
 export function exportarRelatorioPdf(relatorios: RelatorioConferencia[], ordenacao: String, acao: String) {
@@ -16,8 +17,10 @@ export function exportarRelatorioPdf(relatorios: RelatorioConferencia[], ordenac
       ? `${rel.conferencia.nome} — ${formatarDataHora(rel.conferencia.created_at)}`
       : new Date(rel.conferencia.data + 'T00:00:00').toLocaleDateString('pt-BR')
     const observacao = [
+      rel.conferencia.tipo === 'rapida' ? 'Conferência rápida' : '',
       rel.filialNome ? `Filial: ${rel.filialNome}` : '',
       rel.criadorNome ? `Criada por: ${rel.criadorNome}` : '',
+      rel.tempo ? `Tempo de conferência: ${descreverTempo(rel.tempo)}` : '',
       rel.conferencia.observacao ? `Observação: ${rel.conferencia.observacao}` : '',
     ].filter(Boolean).join('   ·   ')
 

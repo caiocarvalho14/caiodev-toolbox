@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { LayoutGrid, ArrowRight, LucideToolbox, LogOut, UserShield, Settings } from 'lucide-react';
+import { LayoutGrid, ArrowRight, LucideToolbox, LogOut, UserShield, Settings, Database } from 'lucide-react';
 import { useRouteAccess } from '../contexts/RouteAccessContext.tsx';
 import HomeCardSkeleton from '../components/HomeCardSkeleton.tsx';
 
@@ -7,6 +7,7 @@ import RippleButton from '../components/RippleButton.tsx';
 
 const visual: Record<string, { icon: LucideIcon; gradient: string }> = {
     "/conferencia": { icon: LucideToolbox, gradient: "from-rose-500 to-red-600" },
+    "/cadastros": { icon: Database, gradient: "from-sky-500 to-indigo-600" },
 };
 
 const visualPadrao = { icon: LayoutGrid, gradient: "from-slate-300 to-slate-400" };

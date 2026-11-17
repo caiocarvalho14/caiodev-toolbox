@@ -1,4 +1,4 @@
-// src/modules/conferencia/components/ItemManager.tsx
+// src/pages/modules/cadastros/components/ItemManager.tsx
 import { useState } from 'react'
 import { Plus, Pencil, Trash2, Search, Package } from 'lucide-react'
 import { useToast } from '../../../../hooks/useToast'
@@ -7,16 +7,17 @@ import { ConfirmDialog } from '../../../../components/ui/ConfirmDialog'
 import { useOfflineList } from '../../../../hooks/useOfflineList'
 import { useSyncStatusMap } from '../../../../hooks/useSyncStatusMap'
 import { SyncBadge } from '../../../../components/ui/SyncBadge'
-import { itensRepository } from '../../../modules/conferencia/repositories/itensRepository'
-import { marcasRepository } from '../../../modules/conferencia/repositories/marcasRepository'
+import { motivoParaNaoExcluir } from '../lib/referencias'
+import { itensRepository } from '../repositories/itensRepository'
+import { marcasRepository } from '../repositories/marcasRepository'
 import type { Item } from '../types/item'
 
 const empty = { nome: '', marca: '', codigo: '', tipo_contagem: 'KG' as 'UND' | 'KG' }
 
 export default function ItemManager() {
-  const { data: itens, loading, reload } = useOfflineList(itensRepository, "conf_item")
-  const { data: marcas } = useOfflineList(marcasRepository, "conf_marca_item")
-  const syncMap = useSyncStatusMap('conf_item')
+  const { data: itens, loading, reload } = useOfflineList(itensRepository, "cad_item")
+  const { data: marcas } = useOfflineList(marcasRepository, "cad_marca")
+  const syncMap = useSyncStatusMap('cad_item')
 
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Item | null>(null)
@@ -76,6 +77,13 @@ export default function ItemManager() {
 
   const confirmDelete = async () => {
     if (!toDelete) return
+    // dado base compartilhado: não exclui o que outros módulos ainda usam
+    const motivo = await motivoParaNaoExcluir('cad_item', toDelete.id)
+    if (motivo) {
+      toast({ variant: 'destructive', title: 'Não é possível excluir', description: motivo })
+      setToDelete(null)
+      return
+    }
     try {
       setDeleting(true)
       await itensRepository.remove(toDelete.id)
@@ -318,7 +326,7 @@ export default function ItemManager() {
         title="Remover item?"
         description={
           toDelete
-            ? `Tem certeza que deseja remover "${toDelete.nome}"? Registros vinculados a esse item podem ser afetados. Esta ação não pode ser desfeita.`
+            ? `Tem certeza que deseja remover "${toDelete.nome}"? Esta ação não pode ser desfeita.`
             : ''
         }
         confirmLabel="Remover"

@@ -6,10 +6,11 @@ import { Modal } from '../../../../../components/ui/Modal'
 import { useOfflineList } from '../../../../../hooks/useOfflineList'
 import { registrosRepository } from '../../../../modules/conferencia/repositories/registrosRespoitory'
 import { contagensRepository } from '../../../../modules/conferencia/repositories/contagensRepository'
-import { itensRepository } from '../../../../modules/conferencia/repositories/itensRepository'
-import { marcasRepository } from '../../../../modules/conferencia/repositories/marcasRepository'
-import { locaisRepository } from '../../../../modules/conferencia/repositories/locaisRepository'
+import { itensRepository } from '../../../cadastros/repositories/itensRepository'
+import { marcasRepository } from '../../../cadastros/repositories/marcasRepository'
+import { locaisRepository } from '../../../cadastros/repositories/locaisRepository'
 import type { RegistroConferencia } from '../../../../modules/conferencia/types/registro'
+import { itemDoRegistro } from '../../lib/itemDoRegistro'
 
 import { useBlocker } from 'react-router'
 
@@ -20,9 +21,9 @@ interface Props {
 export default function ContagensDetalhe({ registro: registroProp }: Props) {
   const { data: registros, reload: reloadRegistros } = useOfflineList(registrosRepository, "conf_registro")
   const { data: todasContagens, loading, reload: reloadContagens } = useOfflineList(contagensRepository, "conf_contagem")
-  const { data: itens } = useOfflineList(itensRepository, "conf_item")
-  const { data: marcas } = useOfflineList(marcasRepository, "conf_marca_item")
-  const { data: locais } = useOfflineList(locaisRepository, "conf_local_contagem")
+  const { data: itens } = useOfflineList(itensRepository, "cad_item")
+  const { data: marcas } = useOfflineList(marcasRepository, "cad_marca")
+  const { data: locais } = useOfflineList(locaisRepository, "cad_local")
 
   // ESTADO PRA VERIFICAR SE O STICKY DO HEADER
   const [isSticky, setIsSticky] = useState(false)
@@ -52,10 +53,10 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
   const registro = registros.find((r) => r.id === registroProp.id) ?? registroProp
   const contagens = todasContagens.filter((c) => c.registro === registro.id)
 
-  const item = itens.find((i) => i.id === registro.item)
-  const marca = item?.marca ? marcas.find((m) => m.id === item.marca) : null
-  const taraPadrao = marca?.tara_emb ?? 0
-  const tipoContagem = item?.tipo_contagem ?? 'KG'
+  // item do cadastro ou digitado na hora (conferência rápida)
+  const item = itemDoRegistro(registro, itens, marcas)
+  const taraPadrao = item.tara ?? 0
+  const tipoContagem = item.unidade
   const usaTara = tipoContagem === 'KG'
 
   // Nova pesagem
@@ -121,6 +122,8 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
         registro: registro.id,
         local: localSelecionado,
         contagem: Math.round(valor * 100) / 100,
+        // horário real da pesagem: sem isso o servidor usaria a hora da sincronização
+        created_at: new Date().toISOString(),
       })
       setQuantidade(0)
       await reloadContagens()
@@ -174,9 +177,9 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
 
     try {
       setSalvandoEdicao(true)
+      // espalha a contagem: editar não muda o horário em que ela foi feita
       await contagensRepository.save({
-        id: editando.id,
-        registro: editando.registro,
+        ...editando,
         local: localEditado,
         contagem: valorFinal,
       })
@@ -197,13 +200,11 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
   const salvarInfo = async () => {
     try {
       setSalvandoInfo(true)
+      // espalha o registro: preserva os campos do item digitado (conferência rápida)
       await registrosRepository.save({
-        id: registro.id,
-        item: registro.item,
+        ...registro,
         qtd_sistema: Number(qtdSistema) || 0,
         observacoes: observacoes || null,
-        data: registro.data,
-        conferencia: registro.conferencia,
       })
       toast({ title: 'Registro atualizado' })
       await reloadRegistros()
@@ -234,18 +235,14 @@ export default function ContagensDetalhe({ registro: registroProp }: Props) {
             `}
       >
         <h2 className="text-xl font-semibold text-slate-900">
-          {item?.codigo} - {marca?.nome} - {item?.nome ?? 'Item removido'}
+          {[item.codigo, item.marcaNome, item.nome].filter(Boolean).join(' - ')}
         </h2>
 
-        {(marca || item) && (
-          <p className="text-sm text-slate-500 mt-0.5">
-            {marca && usaTara && taraPadrao > 0
-              ? ` · tara padrão ${taraPadrao} kg`
-              : ''}
-            {marca ? ' · ' : ''}
-            {tipoContagem}
-          </p>
-        )}
+        <p className="text-sm text-slate-500 mt-0.5">
+          {item.marcaId && usaTara && taraPadrao > 0 ? `tara padrão ${taraPadrao} kg · ` : ''}
+          {tipoContagem}
+          {item.avulso ? ' · item digitado na hora' : ''}
+        </p>
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 p-6">

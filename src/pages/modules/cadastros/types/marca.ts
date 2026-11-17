@@ -1,4 +1,4 @@
-// src/modules/conferencia/types/marcaItem.ts
+// src/pages/modules/cadastros/types/marca.ts
 export interface MarcaItem {
   id: string
   nome: string

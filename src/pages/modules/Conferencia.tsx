@@ -1,25 +1,20 @@
-// src/pages/ConferenciaPage.tsx (ou onde você monta a página do módulo)
-import { Tag, ClipboardList, MapPin, Package , BarChart3 , ChartLine, Building2 } from 'lucide-react'
-import FilialManager from './conferencia/components/FilialManager'
+// src/pages/modules/Conferencia.tsx
+// Itens, marcas, locais e filiais agora são do módulo Cadastros (/cadastros).
+import { ClipboardList, BarChart3, ChartLine, LayoutTemplate, Zap } from 'lucide-react'
 import PageLayout, { type TabItem } from '../PageLayouts'
 import DashboardConf from './conferencia/components/DashManager'
-import MarcaManager from './conferencia/components/MarcaManager'
-import LocalManager from './conferencia/components/LocalManagers'
-import ItemManager from './conferencia/components/ItemManager'
 import ConferenciaManager from './conferencia/components/ConferenciaManager'
+import ModeloManager from './conferencia/components/ModeloManager'
 import RelatorioManager from './conferencia/components/RelatorioManager'
 
 import { formatarDataAtual } from '../../lib/functions'
 import { formatarDataHora } from '../../lib/functions'
 
-
 const tabs: TabItem[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: ChartLine, component: DashboardConf},
+  { id: 'dashboard', label: 'Dashboard', icon: ChartLine, component: DashboardConf },
   { id: 'conferencias', label: 'Conferências', icon: ClipboardList, component: ConferenciaManager },
-  { id: 'itens', label: 'Itens', icon: Package, component: ItemManager },
-  { id: 'marcas', label: 'Marcas', icon: Tag, component: MarcaManager },
-  { id: 'locais', label: 'Locais', icon: MapPin, component: LocalManager },
-  { id: 'filiais', label: 'Filiais', icon: Building2, component: FilialManager },
+  { id: 'rapida', label: 'Conferência rápida', icon: Zap, component: ConferenciaManager, props: { tipo: 'rapida' } },
+  { id: 'modelos', label: 'Modelos', icon: LayoutTemplate, component: ModeloManager },
   { id: 'relatorio', label: 'Relatórios', icon: BarChart3, component: RelatorioManager },
 ]
 

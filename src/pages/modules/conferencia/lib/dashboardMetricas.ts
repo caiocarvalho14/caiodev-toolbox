@@ -3,8 +3,9 @@
 import type { Conferencia } from '../types/Conferencia'
 import type { RegistroConferencia } from '../types/registro'
 import type { Contagem } from '../types/contagem'
-import type { Item } from '../types/item'
-import type { MarcaItem } from '../types/Marcas'
+import type { Item } from '../../cadastros/types/item'
+import type { MarcaItem } from '../../cadastros/types/marca'
+import { itemDoRegistro } from './itemDoRegistro'
 
 export type Status = 'falta' | 'sobra' | 'ok' | 'pendente'
 
@@ -108,19 +109,18 @@ export function montarFatos(
   for (const r of registros) {
     const conf = confMap.get(r.conferencia)
     if (!conf) continue // registro de conferência fora do filtro
-    const item = itensMap.get(r.item)
-    const marca = item?.marca ? marcasMap.get(item.marca) : undefined
+    const item = itemDoRegistro(r, itensMap, marcasMap) // cadastro ou digitado (conferência rápida)
     const p = porRegistro.get(r.id) ?? { soma: 0, qtd: 0 }
     const divergencia = p.soma - r.qtd_sistema
     fatos.push({
       registroId: r.id,
       conferenciaId: conf.id,
       data: conf.data,
-      itemId: r.item,
-      itemNome: item?.nome ?? 'Item removido',
-      marcaId: item?.marca ?? null,
-      marcaNome: marca?.nome ?? '',
-      unidade: item?.tipo_contagem ?? 'KG',
+      itemId: item.chave,
+      itemNome: item.nome,
+      marcaId: item.marcaId,
+      marcaNome: item.marcaNome,
+      unidade: item.unidade,
       sistema: r.qtd_sistema,
       fisico: p.soma,
       divergencia,

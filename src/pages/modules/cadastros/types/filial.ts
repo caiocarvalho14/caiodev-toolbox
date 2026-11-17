@@ -1,4 +1,4 @@
-// src/modules/conferencia/types/filial.ts
+// src/pages/modules/cadastros/types/filial.ts
 export interface Filial {
   id: string
   nome: string

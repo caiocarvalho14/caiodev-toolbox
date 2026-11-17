@@ -4,11 +4,13 @@ import { supabase } from '../supabase'
 
 
 const SYNCABLE_TABLES = [
-  'conf_marca_item',
-  'conf_item',
-  'conf_filial',
+  'cad_marca',
+  'cad_item',
+  'cad_filial',
+  'conf_modelo',
+  'conf_modelo_item',
   'conf_conferencia',
-  'conf_local_contagem',
+  'cad_local',
   'conf_registro',
   'conf_contagem',
   'sistema_usuario',
@@ -46,7 +48,9 @@ export async function pullTable(table: SyncableTable) {
         if (pendentes.has(row.id)) continue // mutação local ainda não enviada vence
 
         const local = locais.get(row.id)
-        if (local && JSON.stringify(local.data) === JSON.stringify(row)) continue // nada mudou
+        // nada mudou — exceto se o registro está escondido por uma exclusão local que não está mais na fila
+        // (ex.: fila de envio apagada nas configurações): aí a versão do servidor volta a aparecer
+        if (local && !local.deletedAt && JSON.stringify(local.data) === JSON.stringify(row)) continue
 
         // registro novo neste aparelho: usa a data de criação (ordem estável);
         // registro alterado no servidor: sobe pro topo

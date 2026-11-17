@@ -2,12 +2,14 @@
 import type { Conferencia } from '../../../modules/conferencia/types/Conferencia'
 import type { RegistroConferencia } from '../../../modules/conferencia/types/registro'
 import type { Contagem } from '../../../modules/conferencia/types/contagem'
-import type { Item } from '../../../modules/conferencia/types/item'
-import type { MarcaItem } from '../../../modules/conferencia/types/Marcas'
-import type { LocalContagem } from '../../../modules/conferencia/types/localContagem'
+import type { Item } from '../../cadastros/types/item'
+import type { MarcaItem } from '../../cadastros/types/marca'
+import type { LocalContagem } from '../../cadastros/types/local'
 import type { Usuario } from '../types/usuario'
-import type { Filial } from '../types/filial'
+import type { Filial } from '../../cadastros/types/filial'
 import { nomeDoUsuario } from '../repositories/usuariosRepository'
+import { itemDoRegistro } from './itemDoRegistro'
+import { temposPorConferencia, type TempoConferencia } from './tempoConferencia'
 
 export interface RelatorioLinha {
   registroId: string
@@ -25,6 +27,7 @@ export interface RelatorioLinha {
 export interface RelatorioConferencia {
   conferencia: Conferencia
   criadorNome: string | null
+  tempo: TempoConferencia | null // primeira → última contagem
   filialNome: string | null
   locaisUsados: LocalContagem[]
   linhas: RelatorioLinha[]
@@ -48,8 +51,7 @@ export function montarRelatorio(
 
   const linhas: RelatorioLinha[] = registros
     .map((r) => {
-      const item = itens.find((i) => i.id === r.item)
-      const marca = item?.marca ? marcas.find((m) => m.id === item.marca) : null
+      const item = itemDoRegistro(r, itens, marcas) // cadastro ou digitado (conferência rápida)
       const contagensDoRegistro = todasContagens.filter((c) => c.registro === r.id)
 
       const porLocal: Record<string, number> = {}
@@ -63,10 +65,10 @@ export function montarRelatorio(
 
       return {
         registroId: r.id,
-        codigo: item?.codigo ?? null,
-        nome: item?.nome ?? 'Item removido',
-        marcaNome: marca?.nome ?? '',
-        tipoContagem: item?.tipo_contagem ?? 'KG',
+        codigo: item.codigo,
+        nome: item.nome,
+        marcaNome: item.marcaNome,
+        tipoContagem: item.unidade,
         sistema: r.qtd_sistema,
         fisico,
         divergencia: fisico - r.qtd_sistema,
@@ -83,6 +85,7 @@ export function montarRelatorio(
   return {
     conferencia,
     criadorNome: nomeDoUsuario(usuarios, conferencia.criador_id),
+    tempo: temposPorConferencia(registros, todasContagens).get(conferencia.id) ?? null,
     filialNome: filiais.find((f) => f.id === conferencia.filial)?.nome ?? null,
     locaisUsados,
     linhas,

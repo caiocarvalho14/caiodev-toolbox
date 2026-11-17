@@ -5,27 +5,28 @@ import { useOfflineList } from '../../../../hooks/useOfflineList'
 import { conferenciasRepository } from '../../../modules/conferencia/repositories/conferenciaRepository'
 import { registrosRepository } from '../../../modules/conferencia/repositories/registrosRespoitory'
 import { contagensRepository } from '../../../modules/conferencia/repositories/contagensRepository'
-import { itensRepository } from '../../../modules/conferencia/repositories/itensRepository'
-import { marcasRepository } from '../../../modules/conferencia/repositories/marcasRepository'
-import { locaisRepository } from '../../../modules/conferencia/repositories/locaisRepository'
+import { itensRepository } from '../../cadastros/repositories/itensRepository'
+import { marcasRepository } from '../../cadastros/repositories/marcasRepository'
+import { locaisRepository } from '../../cadastros/repositories/locaisRepository'
 import { montarRelatorio } from '../../../modules/conferencia/lib/relatorio'
 import { exportarRelatorioPdf } from '../../../modules/conferencia/lib/exportarRelatorioPdf'
 import { formatarDataHora } from '../../../../lib/functions'
 import { gerarAnalise } from '../lib/gerarAnalise'
+import { ehRapida } from '../types/Conferencia'
 import { usuariosRepository, nomeDoUsuario } from '../repositories/usuariosRepository'
-import { filiaisRepository } from '../repositories/filiaisRepository'
+import { filiaisRepository } from '../../cadastros/repositories/filiaisRepository'
 import { useFilialFiltro } from '../hooks/useFilialFiltro'
-import { FilialSelect } from './FilialSelect'
+import { FilialSelect } from '../../cadastros/components/FilialSelect'
 
 export default function RelatorioManager() {
   const { data: conferencias, loading } = useOfflineList(conferenciasRepository, "conf_conferencia")
   const { data: registros } = useOfflineList(registrosRepository, "conf_registro")
   const { data: contagens } = useOfflineList(contagensRepository, "conf_contagem")
-  const { data: itens } = useOfflineList(itensRepository, "conf_item")
-  const { data: marcas } = useOfflineList(marcasRepository, "conf_marca_item")
-  const { data: locais } = useOfflineList(locaisRepository, "conf_local_contagem")
+  const { data: itens } = useOfflineList(itensRepository, "cad_item")
+  const { data: marcas } = useOfflineList(marcasRepository, "cad_marca")
+  const { data: locais } = useOfflineList(locaisRepository, "cad_local")
   const { data: usuarios } = useOfflineList(usuariosRepository, "sistema_usuario")
-  const { data: filiais } = useOfflineList(filiaisRepository, "conf_filial")
+  const { data: filiais } = useOfflineList(filiaisRepository, "cad_filial")
   const [filialFiltro, setFilialFiltro] = useFilialFiltro()
 
   const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set())
@@ -147,8 +148,13 @@ export default function RelatorioManager() {
                   className="rounded border-slate-300 shrink-0"
                 />
                 <span className="min-w-0">
-                  <span className="block text-slate-900 font-medium truncate">
-                    {c.nome || new Date(c.data + 'T00:00:00').toLocaleDateString('pt-BR')}
+                  <span className="flex items-center gap-1.5 text-slate-900 font-medium min-w-0">
+                    <span className="truncate">{c.nome || new Date(c.data + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
+                    {ehRapida(c) && (
+                      <span className="shrink-0 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 text-[10px] font-semibold uppercase tracking-wide">
+                        Rápida
+                      </span>
+                    )}
                   </span>
                   <span className="block text-xs text-slate-400">
                     {formatarDataHora(c.created_at)}

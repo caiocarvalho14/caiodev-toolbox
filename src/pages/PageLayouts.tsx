@@ -112,7 +112,8 @@ export default function PageLayout({
 
       {/* 3. Conteúdo da seção ativa */}
       <div className="max-w-6xl mx-auto px-6 py-8">
-        {ActiveComponent && <ActiveComponent {...(active?.props || {})} />}
+        {/* key por aba: duas abas com o mesmo componente (ex.: conferência normal/rápida) não compartilham estado */}
+        {ActiveComponent && <ActiveComponent key={active?.id} {...(active?.props || {})} />}
       </div>
     </div>
   );

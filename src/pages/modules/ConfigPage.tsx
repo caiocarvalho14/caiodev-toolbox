@@ -1,10 +1,12 @@
 // src/pages/modules/ConfigPage.tsx
-import { Settings, UserRound } from 'lucide-react'
+import { RefreshCw, Settings, UserRound } from 'lucide-react'
 import PageLayout, { type TabItem } from '../PageLayouts'
 import { PerfilConfig } from './configPage/components/PerfilConfig'
+import { SincronizacaoConfig } from './configPage/components/SincronizacaoConfig'
 
 const tabs: TabItem[] = [
   { id: 'perfil', label: 'Perfil', icon: UserRound, component: PerfilConfig },
+  { id: 'sincronizacao', label: 'Sincronização', icon: RefreshCw, component: SincronizacaoConfig },
 ]
 
 export default function ConfigPage() {

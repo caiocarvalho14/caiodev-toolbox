@@ -1,22 +1,35 @@
 // src/modules/conferencia/components/conferencia-views/RegistrosLista.tsx
 import { useMemo, useState, useEffect } from 'react'
-import { Plus, ClipboardList, ChevronRight, Trash2, Pencil, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
+import { Plus, ClipboardList, ChevronRight, Trash2, Pencil, ArrowUp, ArrowDown, ArrowUpDown, Timer } from 'lucide-react'
+import { temposPorConferencia, descreverTempo } from '../../lib/tempoConferencia'
 import { useToast } from '../../../../../hooks/useToast'
 import { Modal } from '../../../../../components/ui/Modal'
 import { ConfirmDialog } from '../../../../../components/ui/ConfirmDialog'
 import { useOfflineList } from '../../../../../hooks/useOfflineList'
 import { registrosRepository } from '../../../../modules/conferencia/repositories/registrosRespoitory.ts'
 import { contagensRepository } from '../../../../modules/conferencia/repositories/contagensRepository'
-import { itensRepository } from '../../../../modules/conferencia/repositories/itensRepository'
-import { marcasRepository } from '../../repositories/marcasRepository.ts'
+import { itensRepository } from '../../../cadastros/repositories/itensRepository'
+import { marcasRepository } from '../../../cadastros/repositories/marcasRepository'
 import type { Conferencia } from '../../../../modules/conferencia/types/Conferencia'
 import type { RegistroConferencia } from '../../../../modules/conferencia/types/registro'
-import type { Item } from '../../types/item'
-import type { MarcaItem } from '../../types/Marcas.ts'
+import type { Item } from '../../../cadastros/types/item'
+import type { MarcaItem } from '../../../cadastros/types/marca'
+import { ehRapida } from '../../types/Conferencia'
+import { itemDoRegistro } from '../../lib/itemDoRegistro'
 
 const SEM_MARCA = '__sem_marca__'
 
-const empty = { item: '', qtd_sistema: '', observacoes: '', data: new Date().toISOString().slice(0, 10) }
+const empty = {
+  item: '',
+  qtd_sistema: '',
+  observacoes: '',
+  data: new Date().toISOString().slice(0, 10),
+  // conferência rápida: item digitado na hora
+  item_nome: '',
+  item_codigo: '',
+  item_marca: '',
+  item_tipo_contagem: 'KG' as 'KG' | 'UND',
+}
 
 type SortKey = 'codigo' | 'marca' | 'item' | 'qtd_sistema' | 'qtd_fisico' | 'divergencia'
 type SortDirection = 'asc' | 'desc'
@@ -38,8 +51,8 @@ interface Props {
 export default function RegistrosLista({ conferencia, onSelect }: Props) {
   const { data: todosRegistros, loading, reload } = useOfflineList(registrosRepository, "conf_registro")
   const { data: contagens } = useOfflineList(contagensRepository, "conf_contagem")
-  const { data: itens } = useOfflineList(itensRepository, "conf_item")
-  const { data: marcas } = useOfflineList(marcasRepository, "conf_marca_item")
+  const { data: itens } = useOfflineList(itensRepository, "cad_item")
+  const { data: marcas } = useOfflineList(marcasRepository, "cad_marca")
 
   // --- Lookups O(1), construídos uma vez por mudança de dados ---
   const itensMap = useMemo(() => {
@@ -65,21 +78,28 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
 
   // resenha pura
 
-  const nomeItem = (itemId: string) => itensMap.get(itemId)?.nome || 'Item não encontrado'
+  const rapida = ehRapida(conferencia)
+  // item do cadastro OU digitado na hora (conferência rápida)
+  const resolver = (r: RegistroConferencia) => itemDoRegistro(r, itensMap, marcasMap)
+  const nomeItem = (r: RegistroConferencia) => resolver(r).nome
   const nomeMarcaDoItem = (itemId: string) => {
     const item = itensMap.get(itemId)
     if (!item?.marca) return 'Sem marca'
     return marcasMap.get(item.marca)?.nome || ''
   }
-  const codigoDoItem = (itemId: string) => itensMap.get(itemId)?.codigo || ''
 
   const registrosDaConferencia = useMemo(
     () => todosRegistros.filter((r) => r.conferencia === conferencia.id),
     [todosRegistros, conferencia.id]
   )
 
+  const tempo = useMemo(
+    () => temposPorConferencia(registrosDaConferencia, contagens).get(conferencia.id) ?? null,
+    [registrosDaConferencia, contagens, conferencia.id]
+  )
+
   const itensJaUsados = useMemo(
-    () => new Set(registrosDaConferencia.map((r) => r.item)),
+    () => new Set(registrosDaConferencia.map((r) => r.item).filter((id): id is string => Boolean(id))),
     [registrosDaConferencia]
   )
 
@@ -88,8 +108,8 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
   const marcasDisponiveis = useMemo(() => {
     const marcaIds = new Set<string>()
     for (const r of registrosDaConferencia) {
-      const item = itensMap.get(r.item)
-      if (item?.marca) marcaIds.add(item.marca)
+      const marcaId = resolver(r).marcaId
+      if (marcaId) marcaIds.add(marcaId)
     }
     return marcas.filter((m) => marcaIds.has(m.id))
   }, [registrosDaConferencia, itensMap, marcas])
@@ -129,16 +149,17 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
   // e ordena — tudo calculado uma vez, reaproveitado direto no render da tabela.
   const linhas = useMemo<LinhaRegistro[]>(() => {
     const base = filtroMarca
-      ? registrosDaConferencia.filter((r) => itensMap.get(r.item)?.marca === filtroMarca)
+      ? registrosDaConferencia.filter((r) => resolver(r).marcaId === filtroMarca)
       : registrosDaConferencia
 
     const enriquecidas = base.map((r): LinhaRegistro => {
       const fisico = fisicoPorRegistro.get(r.id) ?? 0
+      const it = resolver(r)
       return {
         registro: r,
-        codigo: codigoDoItem(r.item),
-        marca: nomeMarcaDoItem(r.item),
-        nome: nomeItem(r.item),
+        codigo: it.codigo ?? '',
+        marca: it.marcaNome || 'Sem marca',
+        nome: it.nome,
         qtdFisico: fisico,
         divergencia: fisico - r.qtd_sistema,
       }
@@ -201,8 +222,78 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
     setOpen(true)
   }
 
+  // sugestões para a conferência rápida: itens já digitados antes (preenche código/marca/unidade)
+  const sugestoesRapidas = useMemo(() => {
+    const map = new Map<string, RegistroConferencia>()
+    for (const r of todosRegistros) {
+      if (r.item || !r.item_nome?.trim()) continue
+      map.set(r.item_nome.trim().toLowerCase(), r) // o mais recente vence (lista vem do mais novo)
+    }
+    return [...map.values()].sort((a, b) => (a.item_nome ?? '').localeCompare(b.item_nome ?? '', 'pt-BR'))
+  }, [todosRegistros])
+
+  const chavesRapidasUsadas = useMemo(
+    () => new Set(registrosDaConferencia.filter((r) => !r.item).map((r) => resolver(r).chave)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [registrosDaConferencia, marcasMap]
+  )
+
+  const aoDigitarNomeRapido = (nome: string) => {
+    const anterior = sugestoesRapidas.find((r) => r.item_nome?.trim().toLowerCase() === nome.trim().toLowerCase())
+    setForm((f) =>
+      anterior
+        ? {
+            ...f,
+            item_nome: nome,
+            item_codigo: anterior.item_codigo ?? '',
+            item_marca: anterior.item_marca ?? '',
+            item_tipo_contagem: anterior.item_tipo_contagem ?? 'KG',
+          }
+        : { ...f, item_nome: nome }
+    )
+  }
+
+  const salvarRapido = async () => {
+    const nome = form.item_nome.trim()
+    if (!nome) {
+      toast({ variant: 'destructive', title: 'Informe o nome do item' })
+      return
+    }
+    const novo = {
+      item: null,
+      item_nome: nome,
+      item_codigo: form.item_codigo.trim() || null,
+      item_marca: form.item_marca || null,
+      item_tipo_contagem: form.item_tipo_contagem,
+      qtd_sistema: Number(form.qtd_sistema) || 0,
+      observacoes: form.observacoes || null,
+      data: form.data,
+      conferencia: conferencia.id,
+    }
+    if (chavesRapidasUsadas.has(resolver({ ...novo, id: '' }).chave)) {
+      toast({
+        variant: 'destructive',
+        title: 'Item já incluído',
+        description: 'Já existe um registro com esse código (ou nome) nesta conferência.',
+      })
+      return
+    }
+    try {
+      setSaving(true)
+      const novoRegistro = await registrosRepository.save(novo)
+      toast({ title: 'Registro criado' })
+      setOpen(false)
+      onSelect(novoRegistro)
+    } catch (err) {
+      toast({ variant: 'destructive', title: 'Erro ao salvar', description: err instanceof Error ? err.message : undefined })
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const save = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (rapida) return salvarRapido()
     if (!form.item) {
       toast({ variant: 'destructive', title: 'Selecione um item' })
       return
@@ -278,14 +369,8 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
 
     try {
       setSalvandoSistema(true)
-      await registrosRepository.save({
-        id: editandoSistema.id,
-        item: editandoSistema.item,
-        qtd_sistema: novoValor,
-        observacoes: editandoSistema.observacoes,
-        data: editandoSistema.data,
-        conferencia: editandoSistema.conferencia,
-      })
+      // espalha o registro inteiro: não perde os campos do item digitado (conferência rápida)
+      await registrosRepository.save({ ...editandoSistema, qtd_sistema: novoValor })
       toast({ title: 'Quantidade do sistema atualizada' })
       setEditandoSistema(null)
       await reload()
@@ -338,6 +423,12 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
           <p className="text-sm text-slate-500 mt-0.5">
             {linhas.length} {linhas.length === 1 ? 'registro' : 'registros'} nesta conferência
           </p>
+          {tempo && (
+            <p className="flex items-center gap-1 text-sm text-slate-500 mt-0.5" title="Da primeira à última contagem desta conferência">
+              <Timer className="w-4 h-4 text-slate-400" />
+              Tempo de conferência: <span className="font-medium text-slate-700">{descreverTempo(tempo)}</span>
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-3">
           {marcasDisponiveis.length > 0 && (
@@ -451,6 +542,96 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
 
       <Modal open={open} onClose={() => setOpen(false)} title="Novo registro">
         <form onSubmit={save} className="space-y-4">
+          {rapida ? (
+            <>
+              <div>
+                <label htmlFor="item_nome" className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Nome do item *
+                </label>
+                <input
+                  id="item_nome"
+                  list="sugestoes-rapidas"
+                  value={form.item_nome}
+                  onChange={(e) => aoDigitarNomeRapido(e.target.value)}
+                  placeholder="Ex: Picanha"
+                  autoFocus
+                  autoComplete="off"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
+                />
+                <datalist id="sugestoes-rapidas">
+                  {sugestoesRapidas.map((r) => (
+                    <option key={r.id} value={r.item_nome ?? ''}>
+                      {r.item_codigo ?? ''}
+                    </option>
+                  ))}
+                </datalist>
+                <p className="text-xs text-slate-400 mt-1.5">Não entra no cadastro de itens. Nomes já usados aparecem como sugestão.</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="item_codigo" className="block text-sm font-medium text-slate-700 mb-1.5">
+                    Código
+                  </label>
+                  <input
+                    id="item_codigo"
+                    value={form.item_codigo}
+                    onChange={(e) => setForm({ ...form, item_codigo: e.target.value })}
+                    placeholder="Opcional"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="item_tipo_contagem" className="block text-sm font-medium text-slate-700 mb-1.5">
+                    Unidade
+                  </label>
+                  <select
+                    id="item_tipo_contagem"
+                    value={form.item_tipo_contagem}
+                    onChange={(e) => setForm({ ...form, item_tipo_contagem: e.target.value as 'KG' | 'UND' })}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
+                  >
+                    <option value="KG">KG</option>
+                    <option value="UND">UND</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label htmlFor="item_marca" className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Marca
+                </label>
+                <select
+                  id="item_marca"
+                  value={form.item_marca}
+                  onChange={(e) => setForm({ ...form, item_marca: e.target.value })}
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
+                >
+                  <option value="">Sem marca</option>
+                  {[...marcas]
+                    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+                    .map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.nome}
+                      </option>
+                    ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="qtd_sistema" className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Quantidade no sistema
+                </label>
+                <input
+                  id="qtd_sistema"
+                  type="number"
+                  step="0.01"
+                  value={form.qtd_sistema}
+                  onChange={(e) => setForm({ ...form, qtd_sistema: e.target.value })}
+                  placeholder="0"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
+                />
+              </div>
+            </>
+          ) : (
+            <>
           <div>
             <label htmlFor="marcaFiltro" className="block text-sm font-medium text-slate-700 mb-1.5">
               Marca
@@ -493,6 +674,8 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
               ))}
             </select>
           </div>
+            </>
+          )}
           <div>
             <label htmlFor="observacoes" className="block text-sm font-medium text-slate-700 mb-1.5">
               Observações
@@ -528,7 +711,7 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
       <Modal
         open={!!editandoSistema}
         onClose={() => setEditandoSistema(null)}
-        title={editandoSistema ? `Quantidade do sistema — ${nomeItem(editandoSistema.item)}` : ''}
+        title={editandoSistema ? `Quantidade do sistema — ${nomeItem(editandoSistema)}` : ''}
       >
         <form onSubmit={salvarQtdSistema} className="space-y-4">
           <div>
@@ -569,7 +752,7 @@ export default function RegistrosLista({ conferencia, onSelect }: Props) {
         title="Remover registro?"
         description={
           toDelete
-            ? `Tem certeza que deseja remover o registro de "${nomeItem(toDelete.item)}"? Todas as pesagens/contagens vinculadas também serão perdidas. Esta ação não pode ser desfeita.`
+            ? `Tem certeza que deseja remover o registro de "${nomeItem(toDelete)}"? Todas as pesagens/contagens vinculadas também serão perdidas. Esta ação não pode ser desfeita.`
             : ''
         }
         confirmLabel="Remover"

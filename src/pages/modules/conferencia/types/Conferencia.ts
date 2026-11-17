@@ -1,4 +1,6 @@
 // src/modules/conferencia/types/conferencia.ts
+export type TipoConferencia = 'normal' | 'rapida'
+
 export interface Conferencia {
   id: string
   nome: string
@@ -7,4 +9,8 @@ export interface Conferencia {
   observacao: string | null
   criador_id?: string | null
   filial?: string | null
+  /** 'rapida' = itens digitados na hora; ausente/'normal' = itens do cadastro */
+  tipo?: TipoConferencia
 }
+
+export const ehRapida = (c: Pick<Conferencia, 'tipo'>) => c.tipo === 'rapida'

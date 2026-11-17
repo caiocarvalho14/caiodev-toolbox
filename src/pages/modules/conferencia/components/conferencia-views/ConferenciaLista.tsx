@@ -1,6 +1,6 @@
 // src/modules/conferencia/components/conferencia-views/ConferenciasLista.tsx
-import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, ClipboardList, ChevronRight, Search, X } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { Plus, Pencil, Trash2, ClipboardList, ChevronRight, Search, X, Timer } from 'lucide-react'
 import { useToast } from '../../../../../hooks/useToast'
 import { Modal } from '../../../../../components/ui/Modal'
 import { ConfirmDialog } from '../../../../../components/ui/ConfirmDialog'
@@ -9,29 +9,38 @@ import { conferenciasRepository } from '../../../../modules/conferencia/reposito
 import { modelosRepository } from '../../../../modules/conferencia/repositories/modeloRepository'
 import { modeloItensRepository } from '../../../../modules/conferencia/repositories/modeloItemRepository'
 import { registrosRepository } from '../../../../modules/conferencia/repositories/registrosRespoitory'
-import type { Conferencia } from '../../../../modules/conferencia/types/Conferencia'
+import { contagensRepository } from '../../repositories/contagensRepository'
+import { temposPorConferencia, formatarDuracao, formatarIntervalo } from '../../lib/tempoConferencia'
+import { ehRapida, type Conferencia, type TipoConferencia } from '../../../../modules/conferencia/types/Conferencia'
 import { formatarDataAtual } from '../../../../../lib/functions'
 import { useAuth } from '../../../../../contexts/AuthContext'
-import { filiaisRepository } from '../../repositories/filiaisRepository'
+import { filiaisRepository } from '../../../cadastros/repositories/filiaisRepository'
 import { useFilialFiltro } from '../../hooks/useFilialFiltro'
-import { FilialSelect } from '../FilialSelect'
+import { FilialSelect } from '../../../cadastros/components/FilialSelect'
 import { usuariosRepository, nomeDoUsuario } from '../../../../modules/conferencia/repositories/usuariosRepository'
 
 const empty = { nome: '', data: new Date().toISOString().slice(0, 10), observacao: '', modelo: '', filial: '' }
 
 interface Props {
+  /** 'rapida' mostra só conferências rápidas (itens digitados na hora); 'normal' as demais */
+  tipo?: TipoConferencia
   onSelect: (conferencia: Conferencia) => void
 }
 
-export default function ConferenciasLista({ onSelect }: Props) {
+export default function ConferenciasLista({ tipo = 'normal', onSelect }: Props) {
+  const rapida = tipo === 'rapida'
   const { data: conferencias, loading, reload } = useOfflineList(conferenciasRepository, "conf_conferencia")
-  const { data: modelos } = useOfflineList(modelosRepository)
-  const { data: modeloItens } = useOfflineList(modeloItensRepository)
+  const { data: modelos } = useOfflineList(modelosRepository, 'conf_modelo')
+  const { data: modeloItens } = useOfflineList(modeloItensRepository, 'conf_modelo_item')
   const { data: usuarios } = useOfflineList(usuariosRepository, 'sistema_usuario')
   const { user } = useAuth()
-  const { data: filiais } = useOfflineList(filiaisRepository, 'conf_filial')
+  const { data: filiais } = useOfflineList(filiaisRepository, 'cad_filial')
   const [filialFiltro, setFilialFiltro] = useFilialFiltro()
   const nomeFilial = (id: string | null | undefined) => filiais.find((f) => f.id === id)?.nome ?? null
+  // tempo de conferência: da primeira à última contagem de cada conferência
+  const { data: todosRegistros } = useOfflineList(registrosRepository, 'conf_registro')
+  const { data: todasContagens } = useOfflineList(contagensRepository, 'conf_contagem')
+  const tempos = useMemo(() => temposPorConferencia(todosRegistros, todasContagens), [todosRegistros, todasContagens])
 
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Conferencia | null>(null)
@@ -94,6 +103,7 @@ export default function ConferenciasLista({ onSelect }: Props) {
         data: form.data,
         observacao: form.observacao,
         filial: form.filial,
+        tipo: editing ? currentConferencia?.tipo ?? 'normal' : tipo,
         // edição mantém o criador original; criação grava o usuário logado
         criador_id: editing ? currentConferencia?.criador_id ?? null : user?.id ?? null,
         created_at:currentConferencia != undefined ? String(currentConferencia?.created_at) : formatarDataAtual()
@@ -153,7 +163,9 @@ export default function ConferenciasLista({ onSelect }: Props) {
     }
   }
 
-  const filtered = conferencias.sort((a, b) => (b.data.localeCompare(a.data))).filter((c) => {
+  // cada aba mostra só o seu tipo (conferências antigas, sem tipo, são normais)
+  const doTipo = conferencias.filter((c) => ehRapida(c) === rapida)
+  const filtered = doTipo.sort((a, b) => (b.data.localeCompare(a.data))).filter((c) => {
     const bateNome = c.nome.toLowerCase().includes(search.toLowerCase())
     const bateData = !dataFiltro || c.data === dataFiltro
     const bateFilial = !filialFiltro || c.filial === filialFiltro
@@ -169,12 +181,15 @@ export default function ConferenciasLista({ onSelect }: Props) {
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h2 className="text-2xl font-semibold text-slate-900">Conferências</h2>
+          <h2 className="text-2xl font-semibold text-slate-900">{rapida ? 'Conferências rápidas' : 'Conferências'}</h2>
+          {rapida && (
+            <p className="text-sm text-slate-500">Itens digitados na hora, sem usar o cadastro de itens.</p>
+          )}
           <p className="text-sm text-slate-500 mt-0.5">
             {filtered.length}{' '}
             {filtered.length === 1 ? 'conferência registrada' : 'conferências registradas'}
-            {temFiltroAtivo && conferencias.length !== filtered.length && (
-              <span className="text-slate-400"> de {conferencias.length}</span>
+            {temFiltroAtivo && doTipo.length !== filtered.length && (
+              <span className="text-slate-400"> de {doTipo.length}</span>
             )}
           </p>
         </div>
@@ -183,7 +198,7 @@ export default function ConferenciasLista({ onSelect }: Props) {
           className="self-start sm:self-auto inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-medium transition-colors hover:bg-slate-800"
         >
           <Plus className="w-4 h-4" />
-          Nova conferência
+          {rapida ? 'Nova conferência rápida' : 'Nova conferência'}
         </button>
       </div>
 
@@ -242,6 +257,16 @@ export default function ConferenciasLista({ onSelect }: Props) {
                     hour: '2-digit',
                     minute: '2-digit',
                   }) : '(Sincronize para atualizar a data.)'}
+                  {tempos.get(c.id) && (
+                    <p
+                      className="flex items-center gap-1 text-xs text-slate-500 mt-1"
+                      title={`Tempo de conferência: da primeira à última contagem (${formatarIntervalo(tempos.get(c.id)!)})`}
+                    >
+                      <Timer className="w-3.5 h-3.5 text-slate-400" />
+                      {formatarDuracao(tempos.get(c.id)!.ms)}
+                      <span className="text-slate-400">· {formatarIntervalo(tempos.get(c.id)!)}</span>
+                    </p>
+                  )}
                   {nomeFilial(c.filial) && (
                     <p className="text-xs font-medium text-slate-600 mt-1">{nomeFilial(c.filial)}</p>
                   )}
@@ -278,7 +303,7 @@ export default function ConferenciasLista({ onSelect }: Props) {
         </div>
       )}
 
-      <Modal open={open} onClose={() => setOpen(false)} title={editing ? 'Editar conferência' : 'Nova conferência'}>
+      <Modal open={open} onClose={() => setOpen(false)} title={editing ? 'Editar conferência' : rapida ? 'Nova conferência rápida' : 'Nova conferência'}>
         <form onSubmit={save} className="space-y-4">
           <div className='hidden'>
             <label htmlFor="data" className="block text-sm font-medium text-slate-700 mb-1.5">
@@ -319,7 +344,7 @@ export default function ConferenciasLista({ onSelect }: Props) {
             />
           </div>
 
-          {!editing && modelos.length > 0 && (
+          {!editing && !rapida && modelos.length > 0 && (
             <div>
               <label htmlFor="modelo" className="block text-sm font-medium text-slate-700 mb-1.5">
                 Modelo
