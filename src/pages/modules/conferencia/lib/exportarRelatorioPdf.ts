@@ -5,7 +5,16 @@ import type { RelatorioConferencia } from './relatorio'
 import { descreverTempo } from './tempoConferencia'
 import { formatarDataHora } from '../../../../lib/functions'
 
-export function exportarRelatorioPdf(relatorios: RelatorioConferencia[], ordenacao: String, acao: String) {
+/** 'divergencia' = encontrado x sistema; 'pesagens' = só o que foi pesado (sem sistema nem divergência) */
+export type ExibicaoRelatorio = 'divergencia' | 'pesagens'
+
+export function exportarRelatorioPdf(
+  relatorios: RelatorioConferencia[],
+  ordenacao: String,
+  acao: String,
+  exibicao: ExibicaoRelatorio = 'divergencia'
+) {
+  const comDivergencia = exibicao === 'divergencia'
   const doc = new jsPDF({ orientation: 'landscape' })
   const margemInferior = 15
   const alturaPagina = doc.internal.pageSize.getHeight()
@@ -37,10 +46,18 @@ export function exportarRelatorioPdf(relatorios: RelatorioConferencia[], ordenac
     doc.text(observacao, 14, cursorY)
     cursorY += 8
 
-    const head = [['Código', 'Produto', 'Encontrado', 'Sistema', 'Divergência', ...rel.locaisUsados.map((l) => l.nome)]]
+    const head = [[
+      'Código',
+      'Produto',
+      'Encontrado',
+      ...(comDivergencia ? ['Sistema', 'Divergência'] : []),
+      ...rel.locaisUsados.map((l) => l.nome),
+    ]]
 
     const relOrdenado =
-      ordenacao == "maior_falta"
+      ordenacao == "maior_pesagem"
+        ? rel.linhas.sort((a, b) => b.fisico - a.fisico)
+        : ordenacao == "maior_falta"
         ? rel.linhas.sort((a, b) => a.divergencia - b.divergencia)
         : ordenacao == "codigo"
           ? rel.linhas.sort((a, b) => Number(b.codigo) - Number(a.codigo))
@@ -50,8 +67,9 @@ export function exportarRelatorioPdf(relatorios: RelatorioConferencia[], ordenac
       l.codigo ?? '-',
       l.marcaNome ? `${l.marcaNome} - ${l.nome} ${l.observacoes != null ? `- (${l.observacoes})` : ''}` : `${l.nome} `,
       l.fisico.toFixed(2),
-      l.sistema.toFixed(2),
-      `${l.divergencia > 0 ? '+' : ''}${l.divergencia.toFixed(2)}`,
+      ...(comDivergencia
+        ? [l.sistema.toFixed(2), `${l.divergencia > 0 ? '+' : ''}${l.divergencia.toFixed(2)}`]
+        : []),
       ...rel.locaisUsados.map((loc) => (l.porLocal[loc.id] != null ? l.porLocal[loc.id].toFixed(2) : '-')),
     ])
 
@@ -59,8 +77,9 @@ export function exportarRelatorioPdf(relatorios: RelatorioConferencia[], ordenac
       '',
       'Total',
       rel.totalFisico.toFixed(2),
-      rel.totalSistema.toFixed(2),
-      `${rel.totalDivergencia > 0 ? '+' : ''}${rel.totalDivergencia.toFixed(2)}`,
+      ...(comDivergencia
+        ? [rel.totalSistema.toFixed(2), `${rel.totalDivergencia > 0 ? '+' : ''}${rel.totalDivergencia.toFixed(2)}`]
+        : []),
       ...rel.locaisUsados.map(() => ''),
     ])
 
@@ -72,7 +91,8 @@ export function exportarRelatorioPdf(relatorios: RelatorioConferencia[], ordenac
       headStyles: { fillColor: [30, 41, 59] },
       margin: { bottom: margemInferior },
       didParseCell: (data) => {
-        if (data.column.index === 4 && data.section === 'body') {
+        // cor de falta/sobra só faz sentido na coluna de divergência
+        if (comDivergencia && data.column.index === 4 && data.section === 'body') {
           const valor = parseFloat(data.cell.raw as string)
           if (!Number.isNaN(valor)) {
             if (valor < -0.001) {

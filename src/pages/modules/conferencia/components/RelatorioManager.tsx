@@ -9,7 +9,7 @@ import { itensRepository } from '../../cadastros/repositories/itensRepository'
 import { marcasRepository } from '../../cadastros/repositories/marcasRepository'
 import { locaisRepository } from '../../cadastros/repositories/locaisRepository'
 import { montarRelatorio } from '../../../modules/conferencia/lib/relatorio'
-import { exportarRelatorioPdf } from '../../../modules/conferencia/lib/exportarRelatorioPdf'
+import { exportarRelatorioPdf, type ExibicaoRelatorio } from '../../../modules/conferencia/lib/exportarRelatorioPdf'
 import { formatarDataHora } from '../../../../lib/functions'
 import { gerarAnalise } from '../lib/gerarAnalise'
 import { ehRapida } from '../types/Conferencia'
@@ -31,6 +31,14 @@ export default function RelatorioManager() {
 
   const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set())
   const [ordenacaoRelatorio, setOrdenacaoRelatorio] = useState('codigo')
+  const [exibicao, setExibicao] = useState<ExibicaoRelatorio>('divergencia')
+
+  const trocarExibicao = (modo: ExibicaoRelatorio) => {
+    setExibicao(modo)
+    // falta/sobra só existem na divergência; pesagem maior só existe em "apenas pesagens"
+    const validas = modo === 'divergencia' ? ['maior_falta', 'menor_falta', 'codigo'] : ['maior_pesagem', 'codigo']
+    if (!validas.includes(ordenacaoRelatorio)) setOrdenacaoRelatorio('codigo')
+  }
 
   const [analise, setAnalise] = useState<string | null>(null)
   const [analisando, setAnalisando] = useState(false)
@@ -80,7 +88,7 @@ export default function RelatorioManager() {
   const exportarPdf = () => {
     if (relatorios.length === 0) return
 
-    exportarRelatorioPdf(relatorios, ordenacaoRelatorio, 'baixar')
+    exportarRelatorioPdf(relatorios, ordenacaoRelatorio, 'baixar', exibicao)
   }
 
   useEffect(() => {
@@ -92,7 +100,8 @@ export default function RelatorioManager() {
     const blob = exportarRelatorioPdf(
       relatorios,
       ordenacaoRelatorio,
-      'ver'
+      'ver',
+      exibicao
     )
 
     if (!(blob instanceof Blob)) return
@@ -103,7 +112,7 @@ export default function RelatorioManager() {
     return () => {
       URL.revokeObjectURL(url)
     }
-  }, [relatorios, ordenacaoRelatorio])
+  }, [relatorios, ordenacaoRelatorio, exibicao])
 
   const gerarAnaliseIA = async () => {
     if (relatorios.length === 0 || analisando) return
@@ -209,9 +218,28 @@ export default function RelatorioManager() {
                 onChange={(e) => setOrdenacaoRelatorio(e.target.value)}
                 className='px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300'
               >
-                <option value="maior_falta">Falta</option>
-                <option value="menor_falta">Sobra</option>
+                {exibicao === 'divergencia' ? (
+                  <>
+                    <option value="maior_falta">Falta</option>
+                    <option value="menor_falta">Sobra</option>
+                  </>
+                ) : (
+                  <option value="maior_pesagem">Maior pesagem</option>
+                )}
                 <option value="codigo">Código</option>
+              </select>
+            </div>
+            <div>
+              <label htmlFor="exibicao_relatorio" className="block text-xs font-medium text-slate-500 mb-1">
+                Exibir:
+              </label>
+              <select id="exibicao_relatorio"
+                value={exibicao}
+                onChange={(e) => trocarExibicao(e.target.value as ExibicaoRelatorio)}
+                className='px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300'
+              >
+                <option value="divergencia">Divergência</option>
+                <option value="pesagens">Apenas pesagens</option>
               </select>
             </div>
 

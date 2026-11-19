@@ -1,6 +1,9 @@
 // src/modules/conferencia/components/conferencia-views/ConferenciasLista.tsx
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, Pencil, Trash2, ClipboardList, ChevronRight, Search, X, Timer } from 'lucide-react'
+import { Plus, Pencil, Trash2, ClipboardList, ChevronRight, Search, X, Timer, Copy } from 'lucide-react'
+import CopiarConferenciaModal from './CopiarConferenciaModal'
+import { itensRepository } from '../../../cadastros/repositories/itensRepository'
+import { marcasRepository } from '../../../cadastros/repositories/marcasRepository'
 import { useToast } from '../../../../../hooks/useToast'
 import { Modal } from '../../../../../components/ui/Modal'
 import { ConfirmDialog } from '../../../../../components/ui/ConfirmDialog'
@@ -48,6 +51,9 @@ export default function ConferenciasLista({ tipo = 'normal', onSelect }: Props) 
   const [saving, setSaving] = useState(false)
   const [toDelete, setToDelete] = useState<Conferencia | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [toCopy, setToCopy] = useState<Conferencia | null>(null)
+  const { data: itens } = useOfflineList(itensRepository, 'cad_item')
+  const { data: marcas } = useOfflineList(marcasRepository, 'cad_marca')
   const { toast } = useToast()
   const hoje = new Date()
   const dataFormatada = hoje.toISOString().split('T')[0];
@@ -291,6 +297,16 @@ export default function ConferenciasLista({ tipo = 'normal', onSelect }: Props) 
                 <span
                   onClick={(e) => {
                     e.stopPropagation()
+                    setToCopy(c)
+                  }}
+                  title="Copiar conferência"
+                  className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500"
+                >
+                  <Copy className="w-4 h-4" />
+                </span>
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation()
                     setToDelete(c)
                   }}
                   className="p-1.5 rounded-md hover:bg-red-50 text-slate-500 hover:text-red-600"
@@ -398,6 +414,25 @@ export default function ConferenciasLista({ tipo = 'normal', onSelect }: Props) 
           </div>
         </form>
       </Modal>
+
+      {toCopy && (
+      <CopiarConferenciaModal
+        key={toCopy.id}
+        origem={toCopy}
+        registros={todosRegistros}
+        itens={itens}
+        marcas={marcas}
+        filiais={filiais}
+        onClose={() => setToCopy(null)}
+        onCopiada={async (nova) => {
+          setToCopy(null)
+          // garante que a cópia (criada hoje) apareça mesmo com filtro de data/filial ativo
+          if (dataFiltro && dataFiltro !== nova.data) setDataFiltro(nova.data)
+          if (filialFiltro && filialFiltro !== nova.filial) setFilialFiltro(nova.filial ?? '')
+          await reload()
+        }}
+      />
+      )}
 
       <ConfirmDialog
         open={!!toDelete}
