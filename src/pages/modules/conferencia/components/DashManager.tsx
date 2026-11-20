@@ -28,6 +28,8 @@ import {
   type Totais,
 } from '../lib/dashboardMetricas'
 import { FILTROS_PADRAO, FiltrosDashboard, type EstadoFiltros } from './dashboard-views/FiltrosDashboard'
+import { usePadraoFiltro, batePadrao } from '../hooks/usePadraoFiltro'
+import { modelosRepository } from '../repositories/modeloRepository'
 import { KpiTile } from './dashboard-views/KpiTile'
 import { GraficoTendencia } from './dashboard-views/GraficoTendencia'
 import { RankingItens } from './dashboard-views/RankingItens'
@@ -64,6 +66,8 @@ export default function DashboardManager() {
   const { data: locais, loading: l6 } = useOfflineList(locaisRepository, 'cad_local')
   const { data: filiais } = useOfflineList(filiaisRepository, 'cad_filial')
   const [filial, setFilial] = useFilialFiltro()
+  const { data: padroes } = useOfflineList(modelosRepository, 'conf_modelo')
+  const [padrao, setPadrao] = usePadraoFiltro()
 
   const [filtros, setFiltros] = useState<EstadoFiltros>(lerFiltros)
   useEffect(() => {
@@ -85,8 +89,8 @@ export default function DashboardManager() {
 
   const daFilial = useMemo(
     // conferências rápidas ficam fora: itens digitados na hora não têm cadastro comum para comparar
-    () => todasConferencias.filter((c) => !ehRapida(c) && (!filial || c.filial === filial)),
-    [todasConferencias, filial]
+    () => todasConferencias.filter((c) => !ehRapida(c) && (!filial || c.filial === filial) && batePadrao(c, padrao)),
+    [todasConferencias, filial, padrao]
   )
 
   const recorte = (p: Periodo) => {
@@ -202,6 +206,12 @@ export default function DashboardManager() {
           filial={filial}
           onFilial={(id) => {
             setFilial(id)
+            resetarSelecoes()
+          }}
+          padroes={padroes}
+          padrao={padrao}
+          onPadrao={(id) => {
+            setPadrao(id)
             resetarSelecoes()
           }}
         />

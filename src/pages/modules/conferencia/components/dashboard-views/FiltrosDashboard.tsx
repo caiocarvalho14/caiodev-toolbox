@@ -2,6 +2,8 @@
 import type { Filial } from '../../../cadastros/types/filial'
 import type { Periodo, Preset } from '../../lib/dashboardMetricas'
 import { FilialSelect } from '../../../cadastros/components/FilialSelect'
+import { PadraoSelect } from '../PadraoSelect'
+import type { ModeloConferencia } from '../../types/modelo'
 
 export interface EstadoFiltros {
   preset: Preset
@@ -32,9 +34,12 @@ interface Props {
   filiais: Filial[]
   filial: string
   onFilial: (id: string) => void
+  padroes: ModeloConferencia[]
+  padrao: string
+  onPadrao: (id: string) => void
 }
 
-export function FiltrosDashboard({ filtros, onChange, filiais, filial, onFilial }: Props) {
+export function FiltrosDashboard({ filtros, onChange, filiais, filial, onFilial, padroes, padrao, onPadrao }: Props) {
   const set = (parcial: Partial<EstadoFiltros>) => onChange({ ...filtros, ...parcial })
 
   return (
@@ -76,6 +81,7 @@ export function FiltrosDashboard({ filtros, onChange, filiais, filial, onFilial 
       )}
 
       <FilialSelect filiais={filiais} value={filial} onChange={onFilial} className="!py-2" />
+      <PadraoSelect padroes={padroes} value={padrao} onChange={onPadrao} className="!py-2" />
 
       <label className="flex items-center gap-1.5 text-sm text-slate-500" title="Divergência até este valor conta como acerto">
         Tolerância ±

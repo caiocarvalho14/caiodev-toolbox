@@ -19,10 +19,12 @@ import { formatarDataAtual } from '../../../../../lib/functions'
 import { useAuth } from '../../../../../contexts/AuthContext'
 import { filiaisRepository } from '../../../cadastros/repositories/filiaisRepository'
 import { useFilialFiltro } from '../../hooks/useFilialFiltro'
+import { usePadraoFiltro, batePadrao, SEM_PADRAO } from '../../hooks/usePadraoFiltro'
+import { PadraoSelect } from '../PadraoSelect'
 import { FilialSelect } from '../../../cadastros/components/FilialSelect'
 import { usuariosRepository, nomeDoUsuario } from '../../../../modules/conferencia/repositories/usuariosRepository'
 
-const empty = { nome: '', data: new Date().toISOString().slice(0, 10), observacao: '', modelo: '', filial: '' }
+const empty = { nome: '', data: new Date().toISOString().slice(0, 10), observacao: '', padrao: '', filial: '' }
 
 interface Props {
   /** 'rapida' mostra só conferências rápidas (itens digitados na hora); 'normal' as demais */
@@ -39,6 +41,8 @@ export default function ConferenciasLista({ tipo = 'normal', onSelect }: Props) 
   const { user } = useAuth()
   const { data: filiais } = useOfflineList(filiaisRepository, 'cad_filial')
   const [filialFiltro, setFilialFiltro] = useFilialFiltro()
+  const [padraoFiltro, setPadraoFiltro] = usePadraoFiltro()
+  const nomePadrao = (id: string | null | undefined) => (id ? modelos.find((m) => m.id === id)?.nome ?? null : null)
   const nomeFilial = (id: string | null | undefined) => filiais.find((f) => f.id === id)?.nome ?? null
   // tempo de conferência: da primeira à última contagem de cada conferência
   const { data: todosRegistros } = useOfflineList(registrosRepository, 'conf_registro')
@@ -72,6 +76,7 @@ export default function ConferenciasLista({ tipo = 'normal', onSelect }: Props) 
     setSearch('')
     setDataFiltro('')
     setFilialFiltro('')
+    setPadraoFiltro('')
   }
 
   const [search, setSearch] = useState('')
@@ -79,14 +84,19 @@ export default function ConferenciasLista({ tipo = 'normal', onSelect }: Props) 
   const openNew = () => {
     setEditing(null)
     // nova conferência já vem na filial filtrada (ou na única que existir)
-    setForm({ ...empty, filial: filialFiltro || (filiais.length === 1 ? filiais[0].id : '') })
+    setForm({
+      ...empty,
+      filial: filialFiltro || (filiais.length === 1 ? filiais[0].id : ''),
+      // nova conferência já vem com o padrão filtrado (ou o único que existir)
+      padrao: padraoFiltro && padraoFiltro !== SEM_PADRAO ? padraoFiltro : modelos.length === 1 ? modelos[0].id : '',
+    })
     setOpen(true)
   }
 
   const openEdit = (c: Conferencia, e: React.MouseEvent) => {
     e.stopPropagation()
     setEditing(c)
-    setForm({ nome: c.nome || '', data: c.data, observacao: c.observacao || '', modelo: '', filial: c.filial ?? '' })
+    setForm({ nome: c.nome || '', data: c.data, observacao: c.observacao || '', padrao: c.padrao ?? '', filial: c.filial ?? '' })
     setOpen(true)
   }
 
@@ -101,6 +111,15 @@ export default function ConferenciasLista({ tipo = 'normal', onSelect }: Props) 
       toast({ variant: 'destructive', title: 'Filial é obrigatória' })
       return
     }
+    // toda conferência normal nova nasce de um padrão (conferências antigas podem continuar sem)
+    if (!rapida && !editing && !form.padrao) {
+      toast({
+        variant: 'destructive',
+        title: 'Padrão é obrigatório',
+        description: modelos.length === 0 ? 'Cadastre um padrão na aba Padrões antes de criar conferências.' : undefined,
+      })
+      return
+    }
     try {
       setSaving(true)
       const conferenciaSalva = await conferenciasRepository.save({
@@ -110,14 +129,15 @@ export default function ConferenciasLista({ tipo = 'normal', onSelect }: Props) 
         observacao: form.observacao,
         filial: form.filial,
         tipo: editing ? currentConferencia?.tipo ?? 'normal' : tipo,
+        padrao: rapida ? null : form.padrao || null,
         // edição mantém o criador original; criação grava o usuário logado
         criador_id: editing ? currentConferencia?.criador_id ?? null : user?.id ?? null,
         created_at:currentConferencia != undefined ? String(currentConferencia?.created_at) : formatarDataAtual()
       })
 
-      // só na criação (não na edição) aplica o modelo selecionado
-      if (!editing && form.modelo) {
-        const itensDoModelo = modeloItens.filter((mi) => mi.modelo === form.modelo)
+      // só na criação (não na edição) traz os itens do padrão selecionado
+      if (!editing && form.padrao) {
+        const itensDoModelo = modeloItens.filter((mi) => mi.modelo === form.padrao)
         for (const mi of itensDoModelo) {
           await registrosRepository.save({
             item: mi.item,
@@ -133,8 +153,8 @@ export default function ConferenciasLista({ tipo = 'normal', onSelect }: Props) 
       toast({
         title: editing
           ? 'Conferência atualizada'
-          : form.modelo
-            ? 'Conferência criada com itens do modelo'
+          : form.padrao
+            ? 'Conferência criada com os itens do padrão'
             : 'Conferência criada',
       })
       setOpen(false)
@@ -175,10 +195,12 @@ export default function ConferenciasLista({ tipo = 'normal', onSelect }: Props) 
     const bateNome = c.nome.toLowerCase().includes(search.toLowerCase())
     const bateData = !dataFiltro || c.data === dataFiltro
     const bateFilial = !filialFiltro || c.filial === filialFiltro
-    return bateNome && bateData && bateFilial
+    // conferência rápida não tem padrão: o filtro só vale na aba de conferências normais
+    return bateNome && bateData && bateFilial && (rapida || batePadrao(c, padraoFiltro))
   })
 
-  const temFiltroAtivo = search.trim() !== '' || dataFiltro !== '' || filialFiltro !== ''
+  const temFiltroAtivo =
+    search.trim() !== '' || dataFiltro !== '' || filialFiltro !== '' || (!rapida && padraoFiltro !== '')
 
   const qtdItensDoModelo = (modeloId: string) =>
     modeloItens.filter((mi) => mi.modelo === modeloId).length
@@ -219,6 +241,7 @@ export default function ConferenciasLista({ tipo = 'normal', onSelect }: Props) 
           />
         </div>
         <FilialSelect filiais={filiais} value={filialFiltro} onChange={setFilialFiltro} />
+        {!rapida && <PadraoSelect padroes={modelos} value={padraoFiltro} onChange={setPadraoFiltro} />}
         <input
           type="date"
           value={dataFiltro}
@@ -273,8 +296,13 @@ export default function ConferenciasLista({ tipo = 'normal', onSelect }: Props) 
                       <span className="text-slate-400">· {formatarIntervalo(tempos.get(c.id)!)}</span>
                     </p>
                   )}
-                  {nomeFilial(c.filial) && (
-                    <p className="text-xs font-medium text-slate-600 mt-1">{nomeFilial(c.filial)}</p>
+                  {(nomeFilial(c.filial) || (!rapida && nomePadrao(c.padrao))) && (
+                    <p className="flex flex-wrap items-center gap-1.5 text-xs font-medium text-slate-600 mt-1">
+                      {nomeFilial(c.filial)}
+                      {!rapida && nomePadrao(c.padrao) && (
+                        <span className="px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700">{nomePadrao(c.padrao)}</span>
+                      )}
+                    </p>
                   )}
                   {nomeDoUsuario(usuarios, c.criador_id) && (
                     <p className="text-xs text-slate-500 mt-1">
@@ -360,26 +388,36 @@ export default function ConferenciasLista({ tipo = 'normal', onSelect }: Props) 
             />
           </div>
 
-          {!editing && !rapida && modelos.length > 0 && (
+          {!rapida && (
             <div>
-              <label htmlFor="modelo" className="block text-sm font-medium text-slate-700 mb-1.5">
-                Modelo
+              <label htmlFor="padrao" className="block text-sm font-medium text-slate-700 mb-1.5">
+                Padrão de conferência{!editing && ' *'}
               </label>
-              <select
-                id="modelo"
-                value={form.modelo}
-                onChange={(e) => setForm({ ...form, modelo: e.target.value })}
-                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
-              >
-                <option value="">Nenhum (conferência em branco)</option>
-                {modelos.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.nome} ({qtdItensDoModelo(m.id)} {qtdItensDoModelo(m.id) === 1 ? 'item' : 'itens'})
-                  </option>
-                ))}
-              </select>
-              <p className="text-xs text-slate-400 mt-1.5">
-                Os itens do modelo selecionado serão adicionados automaticamente a esta conferência.
+              {modelos.length === 0 ? (
+                <p className="text-sm text-slate-600 px-3 py-2.5 rounded-xl bg-amber-50 border border-amber-200">
+                  Nenhum padrão cadastrado. Crie um na aba <span className="font-medium">Padrões</span> para poder criar conferências.
+                </p>
+              ) : (
+                <select
+                  id="padrao"
+                  value={form.padrao}
+                  onChange={(e) => setForm({ ...form, padrao: e.target.value })}
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
+                >
+                  <option value="">{editing ? 'Sem padrão' : 'Selecione o padrão'}</option>
+                  {[...modelos]
+                    .sort((a, b) => (a.nome ?? '').localeCompare(b.nome ?? '', 'pt-BR'))
+                    .map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.nome} ({qtdItensDoModelo(m.id)} {qtdItensDoModelo(m.id) === 1 ? 'item' : 'itens'})
+                      </option>
+                    ))}
+                </select>
+              )}
+              <p className="text-xs text-slate-500 mt-1.5">
+                {editing
+                  ? 'Trocar o padrão só muda o vínculo da conferência; os itens já lançados não mudam.'
+                  : 'Os itens do padrão entram automaticamente e a conferência fica ligada a ele.'}
               </p>
             </div>
           )}

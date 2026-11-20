@@ -1,6 +1,7 @@
 // src/modules/conferencia/components/ModeloManager.tsx
-// Modelos (templates) de conferência: um nome + a lista de itens que entram automaticamente
-// quando uma conferência é criada a partir dele.
+// Padrões de conferência (tabela conf_modelo): um nome + a lista de itens que entram automaticamente
+// quando uma conferência é criada a partir dele. Cada conferência normal fica ligada ao seu padrão
+// (conf_conferencia.padrao), o que permite filtrar conferências por padrão.
 import { useMemo, useState } from 'react'
 import { LayoutTemplate, Pencil, Plus, Search, Trash2, Copy } from 'lucide-react'
 import { useToast } from '../../../../hooks/useToast'
@@ -11,6 +12,7 @@ import { useSyncStatusMap } from '../../../../hooks/useSyncStatusMap'
 import { SyncBadge } from '../../../../components/ui/SyncBadge'
 import { modelosRepository } from '../repositories/modeloRepository'
 import { modeloItensRepository } from '../repositories/modeloItemRepository'
+import { conferenciasRepository } from '../repositories/conferenciaRepository'
 import { itensRepository } from '../../cadastros/repositories/itensRepository'
 import { marcasRepository } from '../../cadastros/repositories/marcasRepository'
 import type { ModeloConferencia } from '../types/modelo'
@@ -24,7 +26,9 @@ export default function ModeloManager() {
   const { data: modeloItens } = useOfflineList(modeloItensRepository, 'conf_modelo_item')
   const { data: itens } = useOfflineList(itensRepository, 'cad_item')
   const { data: marcas } = useOfflineList(marcasRepository, 'cad_marca')
+  const { data: conferencias } = useOfflineList(conferenciasRepository, 'conf_conferencia')
   const syncMap = useSyncStatusMap('conf_modelo')
+  const qtdConferencias = (padraoId: string) => conferencias.filter((c) => c.padrao === padraoId).length
   const { toast } = useToast()
 
   const [busca, setBusca] = useState('')
@@ -98,7 +102,7 @@ export default function ModeloManager() {
       for (const mi of atuais) {
         if (!selecionados.has(mi.item)) await modeloItensRepository.remove(mi.id)
       }
-      toast({ title: editando ? 'Modelo atualizado' : 'Modelo criado' })
+      toast({ title: editando ? 'Padrão atualizado' : 'Padrão criado' })
       setAberto(false)
     } catch (err) {
       toast({ variant: 'destructive', title: 'Erro ao salvar', description: err instanceof Error ? err.message : undefined })
@@ -113,7 +117,7 @@ export default function ModeloManager() {
       setApagando(true)
       for (const mi of itensDoModelo(apagar.id)) await modeloItensRepository.remove(mi.id)
       await modelosRepository.remove(apagar.id)
-      toast({ title: 'Modelo removido' })
+      toast({ title: 'Padrão removido' })
       setApagar(null)
     } catch (err) {
       toast({ variant: 'destructive', title: 'Erro ao remover', description: err instanceof Error ? err.message : undefined })
@@ -130,9 +134,9 @@ export default function ModeloManager() {
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h2 className="text-2xl font-semibold text-slate-900">Modelos de conferência</h2>
+          <h2 className="text-2xl font-semibold text-slate-900">Padrões de conferência</h2>
           <p className="text-sm text-slate-500 mt-0.5">
-            Ao criar uma conferência a partir de um modelo, os itens dele entram automaticamente.
+            Toda conferência é criada a partir de um padrão: os itens dele entram automaticamente e a conferência fica ligada ao padrão.
           </p>
         </div>
         <button
@@ -140,14 +144,14 @@ export default function ModeloManager() {
           className="self-start sm:self-auto inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-medium transition-colors hover:bg-slate-800"
         >
           <Plus className="w-4 h-4" />
-          Novo modelo
+          Novo padrão
         </button>
       </div>
 
       {modelos.length > 3 && (
         <div className="relative mb-5 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar modelo..." className={`${campo} pl-9`} />
+          <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar padrão..." className={`${campo} pl-9`} />
         </div>
       )}
 
@@ -156,7 +160,7 @@ export default function ModeloManager() {
       ) : filtrados.length === 0 ? (
         <div className="text-center py-20 border border-dashed border-slate-200 rounded-2xl bg-white">
           <LayoutTemplate className="w-10 h-10 mx-auto text-slate-300 mb-3" />
-          <p className="text-slate-500 text-sm">{busca ? 'Nenhum modelo encontrado.' : 'Nenhum modelo cadastrado ainda.'}</p>
+          <p className="text-slate-500 text-sm">{busca ? 'Nenhum padrão encontrado.' : 'Nenhum padrão cadastrado ainda.'}</p>
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -176,6 +180,8 @@ export default function ModeloManager() {
                     </div>
                     <p className="text-sm text-slate-500 mt-1">
                       {lista.length} {lista.length === 1 ? 'item' : 'itens'}
+                      {' · '}
+                      {qtdConferencias(m.id)} {qtdConferencias(m.id) === 1 ? 'conferência' : 'conferências'}
                     </p>
                     {porMarca.size > 0 && (
                       <p className="text-xs text-slate-400 mt-0.5">
@@ -205,7 +211,7 @@ export default function ModeloManager() {
         </div>
       )}
 
-      <Modal open={aberto} onClose={() => setAberto(false)} title={editando ? 'Editar modelo' : 'Novo modelo'}>
+      <Modal open={aberto} onClose={() => setAberto(false)} title={editando ? 'Editar padrão' : 'Novo padrão'}>
         <form onSubmit={salvar} className="space-y-4">
           <div>
             <label htmlFor="modelo-nome" className="block text-sm font-medium text-slate-700 mb-1.5">
@@ -299,10 +305,14 @@ export default function ModeloManager() {
 
       <ConfirmDialog
         open={!!apagar}
-        title="Remover modelo?"
+        title="Remover padrão?"
         description={
           apagar
-            ? `O modelo "${apagar.nome}" e a lista de itens dele serão removidos. Conferências já criadas com ele não mudam.`
+            ? `O padrão "${apagar.nome}" e a lista de itens dele serão removidos.${
+                qtdConferencias(apagar.id) > 0
+                  ? ` As ${qtdConferencias(apagar.id)} conferências ligadas a ele continuam existindo, mas ficam "sem padrão".`
+                  : ''
+              }`
             : ''
         }
         confirmLabel="Remover"

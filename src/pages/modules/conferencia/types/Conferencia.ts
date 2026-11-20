@@ -11,6 +11,8 @@ export interface Conferencia {
   filial?: string | null
   /** 'rapida' = itens digitados na hora; ausente/'normal' = itens do cadastro */
   tipo?: TipoConferencia
+  /** padrão de conferência (tabela conf_modelo) usado para criá-la; null = sem padrão */
+  padrao?: string | null
 }
 
 export const ehRapida = (c: Pick<Conferencia, 'tipo'>) => c.tipo === 'rapida'

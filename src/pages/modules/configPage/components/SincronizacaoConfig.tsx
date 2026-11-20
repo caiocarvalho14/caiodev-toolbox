@@ -17,8 +17,8 @@ const NOMES: Record<string, string> = {
   cad_marca: 'Marcas',
   cad_local: 'Locais',
   cad_filial: 'Filiais',
-  conf_modelo: 'Modelos',
-  conf_modelo_item: 'Itens de modelo',
+  conf_modelo: 'Padrões de conferência',
+  conf_modelo_item: 'Itens de padrão',
 }
 
 export function SincronizacaoConfig() {

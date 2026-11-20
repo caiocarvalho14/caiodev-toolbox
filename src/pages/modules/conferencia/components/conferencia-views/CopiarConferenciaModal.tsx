@@ -102,6 +102,8 @@ export default function CopiarConferenciaModal({ origem, registros, itens, marca
         observacao: observacao.trim() || null,
         filial,
         tipo: origem.tipo ?? 'normal',
+        // a cópia continua no mesmo padrão da conferência de origem
+        padrao: origem.padrao ?? null,
         criador_id: user?.id ?? null,
         created_at: formatarDataAtual(),
       })

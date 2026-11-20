@@ -17,6 +17,9 @@ import { usuariosRepository, nomeDoUsuario } from '../repositories/usuariosRepos
 import { filiaisRepository } from '../../cadastros/repositories/filiaisRepository'
 import { useFilialFiltro } from '../hooks/useFilialFiltro'
 import { FilialSelect } from '../../cadastros/components/FilialSelect'
+import { PadraoSelect } from './PadraoSelect'
+import { usePadraoFiltro, batePadrao } from '../hooks/usePadraoFiltro'
+import { modelosRepository } from '../repositories/modeloRepository'
 
 export default function RelatorioManager() {
   const { data: conferencias, loading } = useOfflineList(conferenciasRepository, "conf_conferencia")
@@ -28,6 +31,8 @@ export default function RelatorioManager() {
   const { data: usuarios } = useOfflineList(usuariosRepository, "sistema_usuario")
   const { data: filiais } = useOfflineList(filiaisRepository, "cad_filial")
   const [filialFiltro, setFilialFiltro] = useFilialFiltro()
+  const { data: padroes } = useOfflineList(modelosRepository, 'conf_modelo')
+  const [padraoFiltro, setPadraoFiltro] = usePadraoFiltro()
 
   const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set())
   const [ordenacaoRelatorio, setOrdenacaoRelatorio] = useState('codigo')
@@ -48,10 +53,20 @@ export default function RelatorioManager() {
   const conferenciasOrdenadas = useMemo(
     () =>
       conferencias
-        .filter((c) => !filialFiltro || c.filial === filialFiltro)
+        .filter((c) => (!filialFiltro || c.filial === filialFiltro) && batePadrao(c, padraoFiltro))
         .sort((a, b) => (a.data < b.data ? 1 : -1)),
-    [conferencias, filialFiltro]
+    [conferencias, filialFiltro, padraoFiltro]
   )
+
+  const trocarPadrao = (id: string) => {
+    setPadraoFiltro(id)
+    // conferências de outro padrão não podem continuar selecionadas
+    setSelecionadas(new Set())
+    analiseIdRef.current++
+    setAnalise(null)
+    setErroAnalise(null)
+    setAnalisando(false)
+  }
 
   const trocarFilial = (id: string) => {
     setFilialFiltro(id)
@@ -138,7 +153,8 @@ export default function RelatorioManager() {
     <div className="grid lg:grid-cols-[280px_1fr] gap-6 min-w-0">
       <div className="bg-white rounded-2xl border border-slate-200 p-4 h-fit lg:sticky lg:top-24 min-w-0">
         <h3 className="text-sm font-semibold text-slate-900 mb-3">Conferências</h3>
-        <FilialSelect filiais={filiais} value={filialFiltro} onChange={trocarFilial} className="w-full mb-3" />
+        <FilialSelect filiais={filiais} value={filialFiltro} onChange={trocarFilial} className="w-full mb-2" />
+        <PadraoSelect padroes={padroes} value={padraoFiltro} onChange={trocarPadrao} className="w-full mb-3" />
         {loading ? (
           <p className="text-sm text-slate-400">Carregando...</p>
         ) : conferenciasOrdenadas.length === 0 ? (

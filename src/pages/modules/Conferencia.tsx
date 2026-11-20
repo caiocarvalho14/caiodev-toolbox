@@ -14,7 +14,7 @@ const tabs: TabItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: ChartLine, component: DashboardConf },
   { id: 'conferencias', label: 'Conferências', icon: ClipboardList, component: ConferenciaManager },
   { id: 'rapida', label: 'Conferência rápida', icon: Zap, component: ConferenciaManager, props: { tipo: 'rapida' } },
-  { id: 'modelos', label: 'Modelos', icon: LayoutTemplate, component: ModeloManager },
+  { id: 'modelos', label: 'Padrões', icon: LayoutTemplate, component: ModeloManager },
   { id: 'relatorio', label: 'Relatórios', icon: BarChart3, component: RelatorioManager },
 ]
 
