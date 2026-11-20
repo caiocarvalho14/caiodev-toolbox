@@ -9,7 +9,10 @@ interface Repository<T> {
 
 // Vários componentes usam as mesmas tabelas: compartilha o pull em andamento e
 // não repete o pull de uma tabela que acabou de ser atualizada.
-const PULL_TTL_MS = 30_000
+// Cada busca baixa a tabela inteira (pesagens e registros crescem com o histórico), então
+// abrir telas não deve buscar a mesma tabela de novo antes de alguns minutos. Para dado fresco
+// na hora existe o botão Sincronizar (busca tudo, ignorando este intervalo).
+const PULL_TTL_MS = 5 * 60_000
 const pullsEmAndamento = new Map<string, Promise<void>>()
 const ultimoPull = new Map<string, number>()
 
