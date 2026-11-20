@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* telas de pouca altura (celular pequeno com barra do navegador): usado no modo pesagem */
+@custom-variant baixa (@media (max-height: 680px));
+
 /* RippleButton */
 @keyframes ripple {
   from {

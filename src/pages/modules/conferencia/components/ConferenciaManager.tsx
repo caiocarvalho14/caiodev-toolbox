@@ -68,7 +68,7 @@ export default function ConferenciaManager({ tipo = 'normal' }: { tipo?: TipoCon
         <RegistrosLista conferencia={conferenciaAtiva} onSelect={abrirRegistro} />
       )}
 
-      {view === 'contagens' && registroAtivo && <ContagensDetalhe registro={registroAtivo} />}
+      {view === 'contagens' && registroAtivo && <ContagensDetalhe registro={registroAtivo} onVoltar={voltarParaRegistros} />}
     </div>
   )
 }
