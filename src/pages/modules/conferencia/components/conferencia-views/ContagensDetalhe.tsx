@@ -17,6 +17,7 @@ import { marcasRepository } from '../../../cadastros/repositories/marcasReposito
 import { locaisRepository } from '../../../cadastros/repositories/locaisRepository'
 import type { RegistroConferencia } from '../../../../modules/conferencia/types/registro'
 import { itemDoRegistro } from '../../lib/itemDoRegistro'
+import { temDetalhe, calcularLiquido } from '../../types/contagem'
 
 interface Props {
   registro: RegistroConferencia
@@ -132,6 +133,10 @@ export default function ContagensDetalhe({ registro: registroProp, onVoltar }: P
 
   const [editando, setEditando] = useState<ContagemEditavel | null>(null)
   const [valorEditado, setValorEditado] = useState('')
+  // edição de pesagem com detalhe: bruto, caixas e tara (o líquido é recalculado)
+  const [brutoEditado, setBrutoEditado] = useState('')
+  const [caixasEditado, setCaixasEditado] = useState('')
+  const [taraEditada, setTaraEditada] = useState('')
   const [localEditado, setLocalEditado] = useState('')
   const [salvandoEdicao, setSalvandoEdicao] = useState(false)
 
@@ -184,7 +189,14 @@ export default function ContagensDetalhe({ registro: registroProp, onVoltar }: P
     }
   }
 
-  const registrarContagem = async (valor: number) => {
+  /**
+   * - 'liquido': desconta as caixas (bruto − caixas × tara)
+   * - 'bruto': grava o peso da balança sem desconto (0 caixas)
+   * - 'unidade': item contado por unidade, sem bruto nem caixas
+   */
+  const registrarContagem = async (modo: 'liquido' | 'bruto' | 'unidade') => {
+    const qtdCaixas = modo === 'liquido' ? Math.round(caixas) : 0
+    const valor = modo === 'unidade' ? peso : calcularLiquido(peso, qtdCaixas, taraUnit)
     if (!localAtivo) {
       toast({ variant: 'destructive', title: 'Cadastre um local antes de pesar' })
       return
@@ -199,6 +211,10 @@ export default function ContagensDetalhe({ registro: registroProp, onVoltar }: P
         registro: registro.id,
         local: localAtivo,
         contagem: Math.round(valor * 100) / 100,
+        // detalhe da pesagem: permite conferir e recalcular o líquido depois
+        ...(modo === 'unidade'
+          ? {}
+          : { peso_bruto: Math.round(peso * 100) / 100, qtd_caixas: qtdCaixas, tara_caixa: Math.round(taraUnit * 1000) / 1000 }),
         // horário real da pesagem: sem isso o servidor usaria a hora da sincronização
         created_at: new Date().toISOString(),
       })
@@ -222,7 +238,7 @@ export default function ContagensDetalhe({ registro: registroProp, onVoltar }: P
   const podeRegistrar = !registrando && (usaTara ? liquido > 0 : peso > 0)
   const registrarPrincipal = (e?: React.FormEvent) => {
     e?.preventDefault()
-    if (podeRegistrar) registrarContagem(usaTara ? liquido : peso)
+    if (podeRegistrar) registrarContagem(usaTara ? 'liquido' : 'unidade')
   }
 
   const ajustarCaixas = (delta: number) => {
@@ -257,6 +273,9 @@ export default function ContagensDetalhe({ registro: registroProp, onVoltar }: P
     setListaAberta(false)
     setEditando(c)
     setValorEditado(paraTexto(c.contagem))
+    setBrutoEditado(paraTexto(c.peso_bruto ?? 0))
+    setCaixasEditado(String(c.qtd_caixas ?? 0))
+    setTaraEditada(paraTexto(c.tara_caixa ?? 0))
     // se o local foi removido, obriga a escolher outro em vez de manter um id inexistente
     setLocalEditado(locais.some((l) => l.id === c.local) ? c.local : '')
   }
@@ -264,7 +283,11 @@ export default function ContagensDetalhe({ registro: registroProp, onVoltar }: P
   const salvarEdicao = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editando) return
-    const valor = paraNumero(valorEditado.trim())
+    const comDetalhe = temDetalhe(editando)
+    const bruto = Math.round(paraNumero(brutoEditado) * 100) / 100
+    const qtdCaixas = Math.round(paraNumero(caixasEditado))
+    const taraCaixa = Math.round(paraNumero(taraEditada) * 1000) / 1000
+    const valor = comDetalhe ? calcularLiquido(bruto, qtdCaixas, taraCaixa) : paraNumero(valorEditado.trim())
     if (!localEditado) {
       toast({ variant: 'destructive', title: 'Selecione um local' })
       return
@@ -275,14 +298,22 @@ export default function ContagensDetalhe({ registro: registroProp, onVoltar }: P
     }
     const valorFinal = Math.round(valor * 100) / 100
     // nada mudou: só fecha, sem gerar item na fila de sincronização
-    if (valorFinal === editando.contagem && localEditado === editando.local) {
+    const detalheIgual =
+      !comDetalhe ||
+      (bruto === editando.peso_bruto && qtdCaixas === editando.qtd_caixas && taraCaixa === editando.tara_caixa)
+    if (valorFinal === editando.contagem && localEditado === editando.local && detalheIgual) {
       setEditando(null)
       return
     }
     try {
       setSalvandoEdicao(true)
       // espalha a contagem: editar não muda o horário em que ela foi feita
-      await contagensRepository.save({ ...editando, local: localEditado, contagem: valorFinal })
+      await contagensRepository.save({
+        ...editando,
+        local: localEditado,
+        contagem: valorFinal,
+        ...(comDetalhe ? { peso_bruto: bruto, qtd_caixas: qtdCaixas, tara_caixa: taraCaixa } : {}),
+      })
       toast({ title: usaTara ? 'Pesagem atualizada' : 'Contagem atualizada' })
       setEditando(null)
       await reloadContagens()
@@ -343,6 +374,12 @@ export default function ContagensDetalhe({ registro: registroProp, onVoltar }: P
 
   const teclas = ['1', '2', '3', '4', '5', '6', '7', '8', '9', ',', '0', 'apagar']
 
+  /** "bruto 12,50 · 2 cx × 0,80" (só pesagens com detalhe) */
+  const textoDetalhe = (c: ContagemEditavel) =>
+    temDetalhe(c)
+      ? `bruto ${fmt(c.peso_bruto!)}${c.qtd_caixas ? ` · ${c.qtd_caixas} cx × ${fmt(c.tara_caixa ?? 0)}` : ' · sem caixas'}`
+      : null
+
   const listaPesagens =
     contagens.length === 0 ? (
       <p className="px-4 py-6 text-sm text-slate-600 text-center">
@@ -364,6 +401,9 @@ export default function ContagensDetalhe({ registro: registroProp, onVoltar }: P
                 {localNome(c.local)}
                 {c.created_at ? ` · ${hora(c.created_at)}` : ''}
               </span>
+              {textoDetalhe(c) && (
+                <span className="block text-xs text-slate-500 truncate tabular-nums">{textoDetalhe(c)}</span>
+              )}
             </button>
             <button
               type="button"
@@ -602,6 +642,7 @@ export default function ContagensDetalhe({ registro: registroProp, onVoltar }: P
                   </span>
                   {' · '}
                   {localNome(ultima.local)}
+                  {ultima.qtd_caixas ? ` · ${ultima.qtd_caixas} cx` : ''}
                   {ultima.created_at ? ` · ${hora(ultima.created_at)}` : ''}
                 </p>
                 <button
@@ -648,7 +689,7 @@ export default function ContagensDetalhe({ registro: registroProp, onVoltar }: P
             {usaTara && (
               <button
                 type="button"
-                onClick={() => registrarContagem(peso)}
+                onClick={() => registrarContagem('bruto')}
                 disabled={registrando || peso <= 0}
                 title="Registra o peso sem descontar a tara"
                 className="h-14 baixa:h-12 lg:h-12 px-4 lg:px-6 rounded-xl border-2 border-slate-300 bg-white text-base font-semibold text-slate-800 active:bg-slate-100 hover:border-slate-400 disabled:opacity-40"
@@ -787,22 +828,74 @@ export default function ContagensDetalhe({ registro: registroProp, onVoltar }: P
               ))}
             </select>
           </div>
-          <div>
-            <label htmlFor="quantidade_edicao" className="block text-sm font-medium text-slate-700 mb-1.5">
-              Quantidade ({unidade})
-            </label>
-            <input
-              id="quantidade_edicao"
-              inputMode="decimal"
-              value={valorEditado}
-              onChange={(e) => setValorEditado(sanitizar(e.target.value, true))}
-              autoFocus
-              className="w-full h-12 px-3 rounded-xl border border-slate-300 text-lg text-slate-900 tabular-nums focus:outline-none focus:ring-2 focus:ring-slate-900/20"
-            />
-            {usaTara && (
-              <p className="text-xs text-slate-600 mt-1.5">Informe o valor final da pesagem. A tara não é recalculada aqui.</p>
-            )}
-          </div>
+          {editando && temDetalhe(editando) ? (
+            <div className="space-y-3">
+              <div>
+                <label htmlFor="bruto_edicao" className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Peso bruto (kg)
+                </label>
+                <input
+                  id="bruto_edicao"
+                  inputMode="decimal"
+                  value={brutoEditado}
+                  onChange={(e) => setBrutoEditado(sanitizar(e.target.value, true))}
+                  autoFocus
+                  className="w-full h-12 px-3 rounded-xl border border-slate-300 text-lg text-slate-900 tabular-nums focus:outline-none focus:ring-2 focus:ring-slate-900/20"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="caixas_edicao" className="block text-sm font-medium text-slate-700 mb-1.5">
+                    Caixas
+                  </label>
+                  <input
+                    id="caixas_edicao"
+                    inputMode="numeric"
+                    value={caixasEditado}
+                    onChange={(e) => setCaixasEditado(sanitizar(e.target.value, false))}
+                    className="w-full h-12 px-3 rounded-xl border border-slate-300 text-lg text-slate-900 tabular-nums focus:outline-none focus:ring-2 focus:ring-slate-900/20"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="tara_edicao" className="block text-sm font-medium text-slate-700 mb-1.5">
+                    Tara/caixa (kg)
+                  </label>
+                  <input
+                    id="tara_edicao"
+                    inputMode="decimal"
+                    value={taraEditada}
+                    onChange={(e) => setTaraEditada(sanitizar(e.target.value, true))}
+                    className="w-full h-12 px-3 rounded-xl border border-slate-300 text-lg text-slate-900 tabular-nums focus:outline-none focus:ring-2 focus:ring-slate-900/20"
+                  />
+                </div>
+              </div>
+              <p className="text-sm text-slate-700 rounded-xl bg-slate-100 px-3 py-2 tabular-nums">
+                Líquido:{' '}
+                <span className="font-semibold text-slate-900">
+                  {fmt(calcularLiquido(paraNumero(brutoEditado), Math.round(paraNumero(caixasEditado)), paraNumero(taraEditada)))} kg
+                </span>
+              </p>
+            </div>
+          ) : (
+            <div>
+              <label htmlFor="quantidade_edicao" className="block text-sm font-medium text-slate-700 mb-1.5">
+                Quantidade ({unidade})
+              </label>
+              <input
+                id="quantidade_edicao"
+                inputMode="decimal"
+                value={valorEditado}
+                onChange={(e) => setValorEditado(sanitizar(e.target.value, true))}
+                autoFocus
+                className="w-full h-12 px-3 rounded-xl border border-slate-300 text-lg text-slate-900 tabular-nums focus:outline-none focus:ring-2 focus:ring-slate-900/20"
+              />
+              {usaTara && (
+                <p className="text-xs text-slate-600 mt-1.5">
+                  Pesagem registrada sem detalhe de bruto e caixas: informe o valor final (líquido).
+                </p>
+              )}
+            </div>
+          )}
           <div className="flex gap-3">
             <button
               type="button"
