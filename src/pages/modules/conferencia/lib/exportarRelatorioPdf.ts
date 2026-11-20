@@ -99,8 +99,9 @@ export function exportarRelatorioPdf(
               data.cell.styles.fillColor = [254, 226, 226]
               data.cell.styles.textColor = [185, 28, 28]
             } else if (valor > 0.001) {
-              data.cell.styles.fillColor = [209, 250, 229]
-              data.cell.styles.textColor = [4, 120, 87]
+              // sobra em azul, igual ao dashboard (par vermelho/azul é seguro para daltonismo)
+              data.cell.styles.fillColor = [220, 234, 251]
+              data.cell.styles.textColor = [29, 90, 170]
             }
           }
         }

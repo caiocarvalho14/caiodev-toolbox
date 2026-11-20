@@ -34,7 +34,7 @@ export function RelatorioInsights({ relatorios }: Props) {
               {r.marcaNome ? `${r.marcaNome} · ` : ''}
               {r.nome}
             </span>
-            <span className={`font-medium ${r.totalDivergencia < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+            <span className={`font-medium ${r.totalDivergencia < 0 ? 'text-red-600' : 'text-blue-600'}`}>
               {r.totalDivergencia > 0 ? '+' : ''}
               {r.totalDivergencia.toFixed(2)}
               {r.ocorrencias > 1 ? <span className="text-slate-400 font-normal"> · {r.ocorrencias}x</span> : null}

@@ -259,3 +259,26 @@ export const fmtPct = (n: number | null) =>
   n == null ? '—' : `${(n * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`
 export const fmtData = (isoData: string) => isoData.split('-').reverse().join('/')
 export const fmtDataCurta = (isoData: string) => isoData.slice(8, 10) + '/' + isoData.slice(5, 7)
+
+// ---------- tendência de um item ----------
+
+export type Tendencia = 'melhorando' | 'piorando' | 'estavel' | null
+
+/**
+ * Compara o erro médio (|divergência|) da metade mais recente da série com a metade mais antiga.
+ * null quando há poucas conferências para dizer algo (menos de 4).
+ */
+export function tendenciaDoItem(serie: ResumoItem['serie']): Tendencia {
+  if (serie.length < 4) return null
+  const meio = Math.floor(serie.length / 2)
+  const media = (xs: typeof serie) => xs.reduce((s, x) => s + Math.abs(x.divergencia), 0) / xs.length
+  const antes = media(serie.slice(0, meio))
+  const depois = media(serie.slice(serie.length - meio))
+  // só marca tendência com mudança clara: pelo menos 50% e 1 kg de diferença no erro médio
+  const diferenca = depois - antes
+  if (Math.abs(diferenca) < 1) return 'estavel'
+  const razao = depois / Math.max(antes, 0.01)
+  if (razao >= 1.5) return 'piorando'
+  if (razao <= 1 / 1.5) return 'melhorando'
+  return 'estavel'
+}

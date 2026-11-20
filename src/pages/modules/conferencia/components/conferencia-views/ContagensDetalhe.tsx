@@ -45,7 +45,7 @@ const sanitizar = (v: string, decimais: boolean) => {
 }
 
 const corDivergencia = (d: number) =>
-  d < -0.001 ? 'bg-red-50 text-red-700' : d > 0.001 ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-700'
+  d < -0.001 ? 'bg-red-50 text-red-700' : d > 0.001 ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-700'
 
 const tecla =
   'flex items-center justify-center rounded-xl bg-white border border-slate-200 text-2xl font-semibold text-slate-900 ' +

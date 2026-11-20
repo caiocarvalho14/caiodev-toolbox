@@ -26,7 +26,7 @@ export function RelatorioTabela({ relatorio }: Props) {
             totalDivergencia < -0.001
               ? 'bg-red-100 text-red-700'
               : totalDivergencia > 0.001
-                ? 'bg-emerald-100 text-emerald-700'
+                ? 'bg-blue-100 text-blue-700'
                 : 'bg-slate-100 text-slate-600'
           }`}
         >
@@ -66,7 +66,7 @@ export function RelatorioTabela({ relatorio }: Props) {
                   <td className="px-4 py-2.5 text-right">{l.sistema.toFixed(2)}</td>
                   <td
                     className={`px-4 py-2.5 text-right font-medium ${
-                      divNeg ? 'bg-red-50 text-red-700' : divPos ? 'bg-emerald-50 text-emerald-700' : ''
+                      divNeg ? 'bg-red-50 text-red-700' : divPos ? 'bg-blue-50 text-blue-700' : ''
                     }`}
                   >
                     {l.divergencia > 0 ? '+' : ''}

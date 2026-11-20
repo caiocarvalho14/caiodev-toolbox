@@ -73,6 +73,8 @@ function resumirPorLocal(pesagens: PesagemLocal[]): ResumoLocal[] {
 const statusDe = (l: LinhaGrafico): Exclude<FiltroStatus, 'todos'> =>
   l.pesagens.length === 0 ? 'sem' : l.divergencia < -EPS ? 'falta' : l.divergencia > EPS ? 'sobra' : 'ok'
 
+const LIMITE_LINHAS = 10
+
 export function GraficoSistemaEncontrado({ opcoes, selecionadaId, onSelecionar, linhas }: Props) {
   const [unidade, setUnidade] = useState<'KG' | 'UND'>('KG')
   const [ordenacao, setOrdenacao] = useState<Ordenacao>('falta')
@@ -80,6 +82,8 @@ export function GraficoSistemaEncontrado({ opcoes, selecionadaId, onSelecionar, 
   const [localFoco, setLocalFoco] = useState<string | null>(null)
   const [busca, setBusca] = useState('')
   const [expandidos, setExpandidos] = useState<Set<string>>(() => new Set())
+  // lista curta por padrão: a página rola normalmente, sem uma segunda barra de rolagem dentro do card
+  const [mostrarTodos, setMostrarTodos] = useState(false)
 
   // KG e UND não podem dividir a mesma escala: só aparece o seletor se a conferência tiver os dois
   const unidadesDisponiveis = useMemo(
@@ -169,7 +173,7 @@ export function GraficoSistemaEncontrado({ opcoes, selecionadaId, onSelecionar, 
     'px-3 py-2 rounded-xl border border-slate-200 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300'
 
   return (
-    <div className="flex flex-col mb-4 h-[40rem] min-h-[20rem] resize-y overflow-hidden bg-white rounded-2xl border border-slate-200 p-5 min-w-0">
+    <div id="sistema-encontrado" className="flex flex-col mb-4 bg-white rounded-2xl border border-slate-200 p-5 min-w-0 scroll-mt-16">
       {/* Cabeçalho */}
       <div className="shrink-0 min-w-0">
         <h3 className="text-sm font-semibold text-slate-900">Sistema × Encontrado</h3>
@@ -347,8 +351,9 @@ export function GraficoSistemaEncontrado({ opcoes, selecionadaId, onSelecionar, 
           {linhasVisiveis.length === 0 ? (
             <p className="text-center text-sm text-slate-500 py-10">Nenhum item com esses filtros.</p>
           ) : (
-            <div className="flex-1 min-h-0 overflow-y-auto pr-2 -mr-2 divide-y divide-slate-100">
-              {linhasVisiveis.map((l) => {
+            <>
+            <div className="divide-y divide-slate-100">
+              {(mostrarTodos ? linhasVisiveis : linhasVisiveis.slice(0, LIMITE_LINHAS)).map((l) => {
                 const status = statusDe(l)
                 const aberto = expandidos.has(l.id)
                 const faltaPct = l.sistema > l.fisico ? ((l.sistema - l.fisico) / maximo) * 100 : 0
@@ -528,6 +533,16 @@ export function GraficoSistemaEncontrado({ opcoes, selecionadaId, onSelecionar, 
                 )
               })}
             </div>
+            {linhasVisiveis.length > LIMITE_LINHAS && (
+              <button
+                type="button"
+                onClick={() => setMostrarTodos((v) => !v)}
+                className="mt-3 w-full py-2.5 text-sm font-medium text-slate-600 hover:text-slate-900 rounded-xl hover:bg-slate-50"
+              >
+                {mostrarTodos ? 'Mostrar menos' : `Ver todos os ${linhasVisiveis.length} itens`}
+              </button>
+            )}
+            </>
           )}
         </>
       )}

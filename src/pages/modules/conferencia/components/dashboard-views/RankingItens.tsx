@@ -1,9 +1,9 @@
 // src/modules/conferencia/components/dashboard-views/RankingItens.tsx
 // Itens com maior erro médio no período: uma lista curta, uma barra (falta + sobra) por item.
 import { useState } from 'react'
-import { ListOrdered } from 'lucide-react'
+import { ListOrdered, TrendingDown, TrendingUp } from 'lucide-react'
 import type { ResumoItem } from '../../lib/dashboardMetricas'
-import { fmtNum, fmtSinal } from '../../lib/dashboardMetricas'
+import { fmtNum, fmtSinal, tendenciaDoItem } from '../../lib/dashboardMetricas'
 import { COR } from './dashCores'
 
 const LIMITE = 8
@@ -44,24 +44,25 @@ export function RankingItens({ itens }: { itens: ResumoItem[] }) {
             const parteFalta = i.absoluta > 0 ? i.faltaTotal / i.absoluta : 0
             return (
               <li key={i.itemId} className="grid grid-cols-[1.5rem_minmax(0,1fr)_auto] items-center gap-x-3">
-                <span className="text-xs text-slate-400 tabular-nums text-right">{idx + 1}</span>
+                <span className="text-xs text-slate-500 tabular-nums text-right">{idx + 1}</span>
                 <div className="min-w-0">
                   <div className="flex items-baseline gap-2 min-w-0">
                     <span className="font-medium text-sm text-slate-900 truncate">{i.nome}</span>
-                    {i.marcaNome && <span className="text-xs text-slate-400 shrink-0">{i.marcaNome}</span>}
+                    {i.marcaNome && <span className="text-xs text-slate-500 shrink-0">{i.marcaNome}</span>}
                   </div>
                   <div className="flex h-1.5 mt-1.5 rounded-full overflow-hidden bg-slate-100" style={{ width: `${Math.max(2, larguraTotal)}%` }}>
                     <span style={{ width: `${parteFalta * 100}%`, background: COR.falta }} />
                     <span style={{ width: `${(1 - parteFalta) * 100}%`, background: COR.sobra }} />
                   </div>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <p className="text-xs text-slate-500 mt-1">
                     falta em {i.vezesFalta} de {i.conferencias} {i.conferencias === 1 ? 'conferência' : 'conferências'} · saldo{' '}
                     {fmtSinal(i.liquida, 1)} kg
                   </p>
                 </div>
                 <span className="text-sm font-semibold text-slate-900 tabular-nums text-right">
                   {fmtNum(i.mediaAbsoluta, 1)}
-                  <span className="block text-[11px] font-normal text-slate-400">kg/conf.</span>
+                  <span className="block text-[11px] font-normal text-slate-500">kg/conf.</span>
+                  <Tendencia t={tendenciaDoItem(i.serie)} />
                 </span>
               </li>
             )
@@ -80,4 +81,21 @@ export function RankingItens({ itens }: { itens: ResumoItem[] }) {
       )}
     </div>
   )
+}
+
+/** Erro das conferências mais recentes comparado com as mais antigas do período. */
+function Tendencia({ t }: { t: ReturnType<typeof tendenciaDoItem> }) {
+  if (t === 'piorando')
+    return (
+      <span className="mt-0.5 inline-flex items-center gap-0.5 text-[11px] font-medium text-red-700" title="Erro maior nas conferências mais recentes">
+        <TrendingUp className="w-3 h-3" /> piorando
+      </span>
+    )
+  if (t === 'melhorando')
+    return (
+      <span className="mt-0.5 inline-flex items-center gap-0.5 text-[11px] font-medium text-emerald-700" title="Erro menor nas conferências mais recentes">
+        <TrendingDown className="w-3 h-3" /> melhorando
+      </span>
+    )
+  return null
 }
