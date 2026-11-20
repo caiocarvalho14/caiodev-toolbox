@@ -7,8 +7,10 @@ import ConferenciaManager from './conferencia/components/ConferenciaManager'
 import ModeloManager from './conferencia/components/ModeloManager'
 import RelatorioManager from './conferencia/components/RelatorioManager'
 
-import { formatarDataAtual } from '../../lib/functions'
-import { formatarDataHora } from '../../lib/functions'
+import { useUltimaAtualizacao, formatarAtualizacao } from '../../hooks/useUltimaAtualizacao'
+
+// tabelas que mudam no dia a dia da conferência: a data exibida é a busca mais antiga entre elas
+const TABELAS_DO_MODULO = ['conf_conferencia', 'conf_registro', 'conf_contagem'] as const
 
 const tabs: TabItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: ChartLine, component: DashboardConf },
@@ -19,11 +21,17 @@ const tabs: TabItem[] = [
 ]
 
 export default function ConferenciaPage() {
-  const agora = formatarDataHora(formatarDataAtual())
+  const atualizadoEm = useUltimaAtualizacao(TABELAS_DO_MODULO)
+  const descricao =
+    atualizadoEm === undefined
+      ? 'Carregando...'
+      : atualizadoEm === null
+        ? 'Dados ainda não sincronizados neste aparelho'
+        : `Dados atualizados em ${formatarAtualizacao(atualizadoEm)}`
   return (
     <PageLayout
       title="Conferência"
-      description={`Dados atualizados em ${agora}`}
+      description={descricao}
       icon={ClipboardList}
       gradient="from-rose-500 to-red-600"
       activeTabClassName="border-rose-500 text-rose-600"
