@@ -7,11 +7,17 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
-const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'
+// OpenRouter: API no formato OpenAI. "openrouter/free" é um roteador que escolhe um modelo gratuito
+// a cada pedido (cota gratuita: ~20 pedidos/min e 50/dia sem créditos comprados).
+const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
+const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'openrouter/free'
 const ROTA_CONFERENCIA = '/conferencia'
-const MAX_INPUT_CHARS = process.env.MAX_INPUT_CHARS || 24_000
-const MAX_OUTPUT_TOKENS = process.env.MAX_OUTPUT_TOKENS || 1200
+const MAX_INPUT_CHARS = Number(process.env.MAX_INPUT_CHARS) || 24_000
+const MAX_OUTPUT_TOKENS = Number(process.env.MAX_OUTPUT_TOKENS) || 1200
+// modelos gratuitos podem demorar; o limite da função na Vercel fica logo acima disto
+const TIMEOUT_MS = 50_000
+
+export const config = { maxDuration: 60 }
 
 // O prompt fica no servidor: o cliente só manda os dados e não consegue alterar as instruções.
 const SYSTEM_INSTRUCTION = `Você é um analista de dados de uma operação de estoque. Recebe conferências de estoque (contagem física vs. sistema) e deve analisá-las para apoiar a decisão de quanto bloquear por avaria/inventariar e onde investigar perdas.
@@ -60,9 +66,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Método não permitido' })
   }
 
-  const apiKey = process.env.GROQ_API_KEY
+  const apiKey = process.env.OPENROUTER_API_KEY
   if (!apiKey) {
-    return res.status(500).json({ error: 'GROQ_API_KEY não configurada no servidor' })
+    return res.status(500).json({ error: 'OPENROUTER_API_KEY não configurada no servidor' })
   }
 
   const token = req.headers.authorization?.replace('Bearer ', '')
@@ -82,22 +88,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (typeof dados !== 'string' || !dados.trim()) {
     return res.status(400).json({ error: 'Dados da análise ausentes' })
   }
-  if (dados.length ) {
+  if (dados.length > MAX_INPUT_CHARS) {
     return res.status(413).json({ error: 'Dados muito extensos para análise' })
   }
 
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 25_000)
+  const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS)
 
   try {
-    const resposta = await fetch(GROQ_URL, {
+    const resposta = await fetch(OPENROUTER_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: GROQ_MODEL,
+        model: OPENROUTER_MODEL,
         messages: [
           { role: 'system', content: SYSTEM_INSTRUCTION },
           { role: 'user', content: dados },
@@ -109,26 +115,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     })
 
     const json: any = await resposta.json().catch(() => ({}))
-    const msgGroq: string | undefined = json?.error?.message
+    const msgProvedor: string | undefined = json?.error?.message
 
     if (resposta.status === 429) {
       const espera = resposta.headers.get('retry-after')
       return res.status(429).json({
         error:
-          `Limite de uso da API da Groq atingido (plano gratuito)` +
-          `${espera ? `. Tente novamente em ${espera}s` : '. Aguarde um pouco e tente novamente'}.` +
-          `${msgGroq ? ` Detalhe: ${msgGroq}` : ''}`,
+          `Limite de uso gratuito da IA atingido` +
+          `${espera ? `. Tente novamente em ${espera}s` : '. Aguarde um pouco ou tente amanhã'}.` +
+          `${msgProvedor ? ` Detalhe: ${msgProvedor}` : ''}`,
       })
     }
     if (resposta.status === 413) {
       return res.status(413).json({
-        error: 'Dados acima do limite de tokens por minuto do modelo. Selecione menos conferências.',
+        error: 'Dados acima do limite do modelo. Selecione menos conferências.',
       })
     }
+    if (resposta.status === 401 || resposta.status === 403) {
+      console.error('[gerar-analise] chave OpenRouter recusada:', msgProvedor)
+      return res.status(502).json({ error: 'A chave da OpenRouter foi recusada. Confira OPENROUTER_API_KEY.' })
+    }
+    if (resposta.status === 402) {
+      return res.status(502).json({ error: 'A conta da OpenRouter está sem saldo ou com saldo negativo.' })
+    }
     if (!resposta.ok) {
-      const msg = msgGroq || `status ${resposta.status}`
-      console.error('[gerar-analise] erro Groq:', msg)
-      return res.status(502).json({ error: `Erro na API da Groq: ${msg}` })
+      const msg = msgProvedor || `status ${resposta.status}`
+      console.error('[gerar-analise] erro OpenRouter:', msg)
+      return res.status(502).json({ error: `Erro no serviço de IA: ${msg}` })
     }
 
     const escolha = json?.choices?.[0]
@@ -145,13 +158,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       texto += '\n\n(Resposta cortada pelo limite de tokens.)'
     }
 
-    return res.status(200).json({ analise: texto, uso: json?.usage })
+    // `model` diz qual modelo gratuito o roteador escolheu
+    return res.status(200).json({ analise: texto, uso: json?.usage, modelo: json?.model })
   } catch (err) {
     const abortou = err instanceof Error && err.name === 'AbortError'
     return res.status(abortou ? 504 : 502).json({
       error: abortou
         ? 'A IA demorou demais para responder. Tente novamente.'
-        : 'Falha ao contatar a API da Groq.',
+        : 'Falha ao contatar o serviço de IA.',
     })
   } finally {
     clearTimeout(timeout)

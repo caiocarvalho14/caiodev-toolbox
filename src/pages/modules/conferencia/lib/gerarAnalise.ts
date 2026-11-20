@@ -136,17 +136,24 @@ export async function gerarAnalise(
     data: { session },
   } = await supabase.auth.getSession()
   if (!session) throw new Error('Sessão expirada. Faça login novamente.')
-  const HOST = 'http://localhost:3000/api/'
-  const URL_API = 'https://n8n.caiocarv.com/webhook-test/cc8da448-77bd-41b4-9697-17327893bc6a'
-
-  const res = await fetch(URL_API, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      // Authorization: `Bearer ${session.access_token}`,
-    },
-    body: JSON.stringify({ dados }),
-  })
+  // backend próprio (api/gerar-analise.ts): guarda a chave da OpenRouter e confere o login e o acesso
+  // ao módulo. Em desenvolvimento, a rota só existe rodando com "vercel dev".
+  let res: Response
+  try {
+    res = await fetch('/api/gerar-analise', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ dados }),
+      // um pouco acima do limite do servidor, para a mensagem de erro dele chegar primeiro
+      signal: AbortSignal.timeout(65_000),
+    })
+  } catch (err) {
+    const tempo = err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError')
+    throw new Error(tempo ? 'A IA demorou demais para responder. Tente novamente.' : 'Falha de conexão com o servidor.', { cause: err })
+  }
 
   if (res.status === 404) {
     throw new Error('Rota /api/gerar-analise não encontrada. Em desenvolvimento, rode com "vercel dev".')
@@ -156,7 +163,7 @@ export async function gerarAnalise(
   if (!res.ok) throw new Error(json.error || `Erro ${res.status} ao gerar análise.`)
 
   if (import.meta.env.DEV) {
-    console.info(`[análise IA] ${dados.length} chars enviados | tokens:`, json.uso)
+    console.info(`[análise IA] ${dados.length} chars enviados | modelo: ${json.modelo} | tokens:`, json.uso)
   }
 
   cache.set(dados, json.analise)

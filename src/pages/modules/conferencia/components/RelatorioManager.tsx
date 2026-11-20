@@ -1,6 +1,6 @@
 // src/modules/conferencia/components/RelatorioManager.tsx
 import { useMemo, useState, useRef, useEffect } from 'react'
-import { FileDown, FileSpreadsheet, BarChart3, Sparkles, Loader2 } from 'lucide-react'
+import { FileDown, BarChart3, Sparkles, Loader2, X } from 'lucide-react'
 import { useOfflineList } from '../../../../hooks/useOfflineList'
 import { conferenciasRepository } from '../../../modules/conferencia/repositories/conferenciaRepository'
 import { registrosRepository } from '../../../modules/conferencia/repositories/registrosRespoitory'
@@ -140,7 +140,6 @@ export default function RelatorioManager() {
       const texto = await gerarAnalise(relatorios, { ignorarCache: analise !== null })
       if (id !== analiseIdRef.current) return
       setAnalise(texto)
-      console.log(texto)
     } catch (err) {
       if (id !== analiseIdRef.current) return
       setErroAnalise(err instanceof Error ? err.message : 'Erro ao gerar análise.')
@@ -205,9 +204,8 @@ export default function RelatorioManager() {
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={gerarAnaliseIA}
-              /* análise com IA desabilitada temporariamente */
-              disabled
-              title="Análise com IA indisponível no momento"
+              disabled={relatorios.length === 0 || analisando}
+              title="Gera uma análise das conferências selecionadas com IA (modelo gratuito)"
               className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm font-medium hover:border-slate-300 hover:text-slate-900 transition-colors disabled:opacity-50"
             >
               {analisando ? (
@@ -269,6 +267,49 @@ export default function RelatorioManager() {
           </div>
         ) : (
           <>
+            {(analisando || analise || erroAnalise) && (
+              <section
+                aria-live="polite"
+                className={`rounded-2xl border p-5 ${erroAnalise ? 'border-red-200 bg-red-50' : 'border-slate-200 bg-white'}`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                    <Sparkles className="w-4 h-4 text-violet-600" />
+                    Análise com IA
+                  </h3>
+                  {!analisando && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        analiseIdRef.current++
+                        setAnalise(null)
+                        setErroAnalise(null)
+                      }}
+                      aria-label="Fechar análise"
+                      className="p-1 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                {analisando ? (
+                  <p className="mt-3 flex items-center gap-2 text-sm text-slate-600">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Analisando {relatorios.length} {relatorios.length === 1 ? 'conferência' : 'conferências'}… modelos gratuitos podem
+                    levar até um minuto.
+                  </p>
+                ) : erroAnalise ? (
+                  <p className="mt-2 text-sm text-red-800">{erroAnalise}</p>
+                ) : (
+                  <>
+                    <div className="mt-3 text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">{analise}</div>
+                    <p className="mt-4 text-xs text-slate-500">
+                      Gerada por IA a partir dos números do relatório. Confira os valores antes de tomar decisões.
+                    </p>
+                  </>
+                )}
+              </section>
+            )}
             {pdfUrl && (
               <iframe
                 src={pdfUrl}
