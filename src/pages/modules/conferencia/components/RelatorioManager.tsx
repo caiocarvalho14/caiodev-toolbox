@@ -1,6 +1,6 @@
 // src/modules/conferencia/components/RelatorioManager.tsx
-import { useMemo, useState, useRef, useEffect } from 'react'
-import { FileDown, BarChart3, Sparkles, Loader2, X } from 'lucide-react'
+import { useMemo, useState, useEffect } from 'react'
+import { FileDown, BarChart3 } from 'lucide-react'
 import { useOfflineList } from '../../../../hooks/useOfflineList'
 import { conferenciasRepository } from '../../../modules/conferencia/repositories/conferenciaRepository'
 import { registrosRepository } from '../../../modules/conferencia/repositories/registrosRespoitory'
@@ -11,7 +11,6 @@ import { locaisRepository } from '../../cadastros/repositories/locaisRepository'
 import { montarRelatorio } from '../../../modules/conferencia/lib/relatorio'
 import { exportarRelatorioPdf, type ExibicaoRelatorio } from '../../../modules/conferencia/lib/exportarRelatorioPdf'
 import { formatarDataHora } from '../../../../lib/functions'
-import { gerarAnalise } from '../lib/gerarAnalise'
 import { ehRapida } from '../types/Conferencia'
 import { usuariosRepository, nomeDoUsuario } from '../repositories/usuariosRepository'
 import { filiaisRepository } from '../../cadastros/repositories/filiaisRepository'
@@ -45,10 +44,6 @@ export default function RelatorioManager() {
     if (!validas.includes(ordenacaoRelatorio)) setOrdenacaoRelatorio('codigo')
   }
 
-  const [analise, setAnalise] = useState<string | null>(null)
-  const [analisando, setAnalisando] = useState(false)
-  const [erroAnalise, setErroAnalise] = useState<string | null>(null)
-  const analiseIdRef = useRef(0) // descarta respostas de requisições que ficaram velhas
 
   const conferenciasOrdenadas = useMemo(
     () =>
@@ -62,20 +57,12 @@ export default function RelatorioManager() {
     setPadraoFiltro(id)
     // conferências de outro padrão não podem continuar selecionadas
     setSelecionadas(new Set())
-    analiseIdRef.current++
-    setAnalise(null)
-    setErroAnalise(null)
-    setAnalisando(false)
   }
 
   const trocarFilial = (id: string) => {
     setFilialFiltro(id)
     // conferências de outra filial não podem continuar selecionadas
     setSelecionadas(new Set())
-    analiseIdRef.current++
-    setAnalise(null)
-    setErroAnalise(null)
-    setAnalisando(false)
   }
 
   const relatorios = useMemo(() => {
@@ -91,11 +78,6 @@ export default function RelatorioManager() {
       next.has(id) ? next.delete(id) : next.add(id)
       return next
     })
-    // a seleção mudou: a análise anterior não vale mais
-    analiseIdRef.current++
-    setAnalise(null)
-    setErroAnalise(null)
-    setAnalisando(false)
   }
 
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
@@ -128,25 +110,6 @@ export default function RelatorioManager() {
       URL.revokeObjectURL(url)
     }
   }, [relatorios, ordenacaoRelatorio, exibicao])
-
-  const gerarAnaliseIA = async () => {
-    if (relatorios.length === 0 || analisando) return
-
-    const id = ++analiseIdRef.current
-    setAnalisando(true)
-    setErroAnalise(null)
-
-    try {
-      const texto = await gerarAnalise(relatorios, { ignorarCache: analise !== null })
-      if (id !== analiseIdRef.current) return
-      setAnalise(texto)
-    } catch (err) {
-      if (id !== analiseIdRef.current) return
-      setErroAnalise(err instanceof Error ? err.message : 'Erro ao gerar análise.')
-    } finally {
-      if (id === analiseIdRef.current) setAnalisando(false)
-    }
-  }
 
   return (
     <div className="grid lg:grid-cols-[280px_1fr] gap-6 min-w-0">
@@ -203,19 +166,6 @@ export default function RelatorioManager() {
           </div>
           <div className="flex gap-2 flex-wrap">
             <button
-              onClick={gerarAnaliseIA}
-              disabled={relatorios.length === 0 || analisando}
-              title="Gera uma análise das conferências selecionadas com IA (modelo gratuito)"
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm font-medium hover:border-slate-300 hover:text-slate-900 transition-colors disabled:opacity-50"
-            >
-              {analisando ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Sparkles className="w-4 h-4" />
-              )}
-              {analisando ? 'Analisando...' : analise ? 'Gerar novamente' : 'Análise com IA'}
-            </button>
-            <button
               onClick={exportarPdf}
               disabled={relatorios.length === 0}
               className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors disabled:opacity-50"
@@ -267,49 +217,6 @@ export default function RelatorioManager() {
           </div>
         ) : (
           <>
-            {(analisando || analise || erroAnalise) && (
-              <section
-                aria-live="polite"
-                className={`rounded-2xl border p-5 ${erroAnalise ? 'border-red-200 bg-red-50' : 'border-slate-200 bg-white'}`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                    <Sparkles className="w-4 h-4 text-violet-600" />
-                    Análise com IA
-                  </h3>
-                  {!analisando && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        analiseIdRef.current++
-                        setAnalise(null)
-                        setErroAnalise(null)
-                      }}
-                      aria-label="Fechar análise"
-                      className="p-1 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-                {analisando ? (
-                  <p className="mt-3 flex items-center gap-2 text-sm text-slate-600">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Analisando {relatorios.length} {relatorios.length === 1 ? 'conferência' : 'conferências'}… modelos gratuitos podem
-                    levar até um minuto.
-                  </p>
-                ) : erroAnalise ? (
-                  <p className="mt-2 text-sm text-red-800">{erroAnalise}</p>
-                ) : (
-                  <>
-                    <div className="mt-3 text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">{analise}</div>
-                    <p className="mt-4 text-xs text-slate-500">
-                      Gerada por IA a partir dos números do relatório. Confira os valores antes de tomar decisões.
-                    </p>
-                  </>
-                )}
-              </section>
-            )}
             {pdfUrl && (
               <iframe
                 src={pdfUrl}
