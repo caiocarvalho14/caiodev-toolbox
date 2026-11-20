@@ -2,6 +2,19 @@
 import { offlineDb, type SyncQueueItem } from '../offlineDb'
 import { supabase } from '../supabase'
 import { pullAll } from './pullEngine'
+import { ehFalhaDeConexao, marcarOffline, marcarOnline, dispensarAvisoVoltou } from '../conexao'
+
+// O botão Sincronizar é um pedido explícito do usuário: cada pedido ao servidor pode levar
+// até 10s (as buscas automáticas ao abrir telas desistem em 2s e usam os dados locais).
+const TOLERANCIA_SINCRONIZAR_MS = 10_000
+
+/** Erro lançado quando a sincronização para por falta de conexão. */
+export class SemConexaoError extends Error {
+  constructor() {
+    super('Sem conexão com o servidor')
+    this.name = 'SemConexaoError'
+  }
+}
 
 let syncing = false
 let pendingRerun = false
@@ -33,6 +46,9 @@ export async function requestSync() {
   syncing = true
   try {
     await processQueue()
+  } catch (err) {
+    // envio em segundo plano: sem conexão, a fila fica para depois
+    if (!(err instanceof SemConexaoError)) throw err
   } finally {
     syncing = false
     if (pendingRerun) {
@@ -49,16 +65,19 @@ async function processQueue() {
     .sortBy('createdAt')
 
   for (const item of items) {
-    await processItem(item)
+    const resultado = await processItem(item)
+    // caiu a conexão: para aqui (os próximos falhariam um a um) e mantém o resto na fila
+    if (resultado === 'sem-conexao') throw new SemConexaoError()
   }
 }
 
-async function processItem(item: SyncQueueItem) {
+async function processItem(item: SyncQueueItem): Promise<'ok' | 'erro' | 'sem-conexao'> {
+  const prazo = () => AbortSignal.timeout(TOLERANCIA_SINCRONIZAR_MS)
   await offlineDb.syncQueue.update(item.id, { status: 'syncing' })
 
   try {
     if (item.operation === 'delete') {
-      const { error } = await supabase.from(item.table).delete().eq('id', item.recordId)
+      const { error } = await supabase.from(item.table).delete().eq('id', item.recordId).abortSignal(prazo())
       if (error) throw error
 
       await offlineDb.records.delete([item.table, item.recordId])
@@ -74,6 +93,7 @@ async function processItem(item: SyncQueueItem) {
         .from(item.table)
         .upsert(item.payload)
         .select()
+        .abortSignal(prazo())
         .single()
 
       if (error) throw error
@@ -85,13 +105,22 @@ async function processItem(item: SyncQueueItem) {
     }
 
     await offlineDb.syncQueue.delete(item.id)
+    marcarOnline()
+    return 'ok'
   } catch (err) {
+    if (ehFalhaDeConexao(err)) {
+      // não é erro do registro: volta para a fila sem contar tentativa
+      await offlineDb.syncQueue.update(item.id, { status: 'pending' })
+      marcarOffline()
+      return 'sem-conexao'
+    }
     const message = extractErrorMessage(err)
     await offlineDb.syncQueue.update(item.id, {
       status: 'error',
       attempts: item.attempts + 1,
       lastError: message,
     })
+    return 'erro'
   }
 }
 
@@ -103,6 +132,26 @@ export async function isPendingSync(table: string, id: string): Promise<boolean>
 
 /** Fluxo completo: envia pendências locais, depois busca atualizações do servidor. */
 export async function fullSync() {
-  await requestSync() // push
-  await pullAll()      // pull
+  try {
+    await processQueueExclusivo() // push
+    await pullAll(TOLERANCIA_SINCRONIZAR_MS) // pull
+    dispensarAvisoVoltou() // sincronizou: o aviso de "internet voltou" já cumpriu o papel
+  } catch (err) {
+    if (ehFalhaDeConexao(err) || err instanceof SemConexaoError) throw new SemConexaoError()
+    throw err
+  }
+}
+
+/** Envia a fila respeitando o controle de execução única do requestSync, mas propagando a falta de conexão. */
+async function processQueueExclusivo() {
+  if (syncing) {
+    // já tem um envio rodando: espera ele terminar e roda de novo para pegar o que entrou depois
+    while (syncing) await new Promise((r) => setTimeout(r, 100))
+  }
+  syncing = true
+  try {
+    await processQueue()
+  } finally {
+    syncing = false
+  }
 }

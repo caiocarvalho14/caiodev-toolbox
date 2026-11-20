@@ -1,6 +1,7 @@
 // src/lib/sync/pullEngine.ts
 import { offlineDb, type LocalRecord } from '../offlineDb'
 import { supabase } from '../supabase'
+import { TOLERANCIA_MS, ehFalhaDeConexao, marcarOffline, marcarOnline } from '../conexao'
 
 const SYNCABLE_TABLES = [
   'cad_marca',
@@ -29,7 +30,9 @@ async function comTentativas<T>(fn: () => Promise<T>): Promise<T> {
     try {
       return await fn()
     } catch (err) {
-      if (tentativa >= TENTATIVAS) throw err
+      // sem conexão ou servidor não respondeu dentro da tolerância: desiste na hora e o app
+      // segue com os dados locais (repetir só faria o usuário esperar mais)
+      if (ehFalhaDeConexao(err) || tentativa >= TENTATIVAS) throw err
       // sinal ruim costuma voltar em instantes: espera 0,5s, depois 1s
       await new Promise((r) => setTimeout(r, 500 * 2 ** (tentativa - 1)))
     }
@@ -45,9 +48,12 @@ async function comTentativas<T>(fn: () => Promise<T>): Promise<T> {
  * - `completa` = recebeu pelo menos o total que o servidor disse ter. Se não, quem chama
  *   não deve apagar nada local com base nesta leitura.
  */
-async function baixarTabela(table: SyncableTable) {
+async function baixarTabela(table: SyncableTable, toleranciaMs: number) {
   const total = await comTentativas(async () => {
-    const { count, error } = await supabase.from(table).select('id', { count: 'exact', head: true })
+    const { count, error } = await supabase
+      .from(table)
+      .select('id', { count: 'exact', head: true })
+      .abortSignal(AbortSignal.timeout(toleranciaMs))
     if (error) throw error
     return count
   })
@@ -60,7 +66,8 @@ async function baixarTabela(table: SyncableTable) {
     const bloco = await comTentativas(async () => {
       let consulta = supabase.from(table).select('*').order('id', { ascending: true }).limit(PAGINA)
       if (depoisDe) consulta = consulta.gt('id', depoisDe)
-      const { data, error } = await consulta
+      // cada pedido tem até `toleranciaMs` para responder
+      const { data, error } = await consulta.abortSignal(AbortSignal.timeout(toleranciaMs))
       if (error) throw error
       return (data ?? []) as LinhaServidor[]
     })
@@ -74,13 +81,25 @@ async function baixarTabela(table: SyncableTable) {
   return { linhas, completa: total != null && linhas.length >= total }
 }
 
-export async function pullTable(table: SyncableTable) {
+/**
+ * @param toleranciaMs tempo máximo de cada pedido ao servidor. Padrão 2s (buscas automáticas ao
+ *   abrir telas): passou disso, desiste e a tela continua com os dados locais.
+ */
+export async function pullTable(table: SyncableTable, toleranciaMs = TOLERANCIA_MS) {
   // registros mexidos no aparelho depois deste instante (salvos, editados ou enviados durante o
   // download) não são tocados: a leitura do servidor pode ser anterior a essa mudança
   const inicio = Date.now()
 
   // 1) rede primeiro, fora de qualquer transação do Dexie
-  const { linhas: linhasServidor, completa } = await baixarTabela(table)
+  let baixado: Awaited<ReturnType<typeof baixarTabela>>
+  try {
+    baixado = await baixarTabela(table, toleranciaMs)
+    marcarOnline()
+  } catch (err) {
+    if (ehFalhaDeConexao(err)) marcarOffline()
+    throw err
+  }
+  const { linhas: linhasServidor, completa } = baixado
 
   // 2) leitura do estado local + escrita na mesma transação: se o usuário salvar algo
   //    enquanto o fetch estava em andamento, a fila já aparece aqui e o registro não é sobrescrito
@@ -140,13 +159,16 @@ export async function pullTable(table: SyncableTable) {
 }
 
 /** Busca todas as tabelas sincronizáveis (usado pelo botão Sincronizar, depois do envio). */
-export async function pullAll() {
+/** @param toleranciaMs o botão Sincronizar passa uma tolerância maior: ali o usuário pediu para esperar */
+export async function pullAll(toleranciaMs = TOLERANCIA_MS) {
   // uma tabela com problema não impede as outras de atualizar; o erro sobe no fim
   const falhas: string[] = []
   for (const table of SYNCABLE_TABLES) {
     try {
-      await pullTable(table)
+      await pullTable(table, toleranciaMs)
     } catch (err) {
+      // sem conexão: não adianta tentar as outras tabelas agora
+      if (ehFalhaDeConexao(err)) throw err
       console.error(`[pull] falhou para "${table}":`, err)
       falhas.push(table)
     }

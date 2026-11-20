@@ -40,20 +40,14 @@ export default defineConfig({
         // app abrir offline mesmo sem nenhuma requisição de rede
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
 
+        // Sem cache de respostas do Supabase aqui: os dados offline ficam no IndexedDB do app
+        // (registros, sessão, rotas e cargos). Um cache do service worker devolveria respostas
+        // antigas quando a rede falha, o app acharia que está online e gravaria dados velhos.
+        // O app espera o servidor por no máximo 2s (src/lib/conexao.ts) e segue com os dados locais.
         runtimeCaching: [
           {
-            // GETs no Supabase (rotas, dados) — tenta rede primeiro, cai pro
-            // cache se não responder a tempo. NÃO cobre POST/PATCH (auth,
-            // inserts), que o workbox não intercepta por padrão.
-            urlPattern: ({ url, request }) =>
-              url.hostname.endsWith('.supabase.co') && request.method === 'GET',
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'supabase-api',
-              networkTimeoutSeconds: 5,
-              cacheableResponse: { statuses: [0, 200] },
-              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 }, // 1 dia
-            },
+            urlPattern: ({ url }) => url.hostname.endsWith('.supabase.co'),
+            handler: 'NetworkOnly',
           },
         ],
       },
